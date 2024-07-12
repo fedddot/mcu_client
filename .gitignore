@@ -1,0 +1,15 @@
+*.*
+.vscode
+build
+!.gitignore
+!.github
+!*.json
+!*.c
+!*.cpp
+!*.h
+!*.hpp
+!CMakeLists.txt
+!*.cmake
+!*.dsl
+!*.yml
+!*.py
