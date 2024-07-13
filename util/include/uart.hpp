@@ -1,14 +1,15 @@
 #ifndef	UART_HPP
 #define	UART_HPP
 
-#include "listener.hpp"
-#include "mcu_client_types.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
+
+#include "listener.hpp"
+#include "mcu_client_types.hpp"
 
 namespace mcu_client_utl {
 
