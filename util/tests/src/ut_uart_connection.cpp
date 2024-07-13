@@ -1,25 +1,31 @@
-#include <condition_variable>
 #include <iostream>
-#include <mutex>
 #include <string>
 #include <unistd.h>
 
 #include "gtest/gtest.h"
 
-#include "custom_listener.hpp"
+#include "uart.hpp"
 #include "uart_connection.hpp"
 
 using namespace mcu_client_utl;
 using namespace mcu_server_utl;
 
 TEST(ut_uart_connection, ctor_dtor) {
+	// GIVEN
+	Uart uart("/dev/ttyACM0", Uart::UartBaud::BAUD9600, 100);
+
 	// WHEN
 	UartConnection *instance_ptr(nullptr);
 
 	// THEN
 	ASSERT_NO_THROW(
 		(
-			instance_ptr = new UartConnection()
+			instance_ptr = new UartConnection(
+				&uart,
+				1000,
+				"MSG_HEADER",
+				"MSG_TAIL"
+			)
 		)
 	);
 	ASSERT_NE(nullptr, instance_ptr);
@@ -30,33 +36,20 @@ TEST(ut_uart_connection, ctor_dtor) {
 
 TEST(ut_uart_connection, run_sanity) {
 	// GIVEN
-	const mcu_client::ClientData test_data("MSG_HEADER{\"ctor_id\" : 0, \"gpio_dir\" : 1, \"gpio_id\" : 25}MSG_TAIL");
-	bool data_received(false);
-	std::mutex mux;
-	std::condition_variable cond;
-
-	CustomListener<mcu_client::ClientData> test_listener(
-		[&data_received, &mux, &cond](const mcu_client::ClientData& data) {
-			std::unique_lock lock(mux);
-			std::cout << "data received: " << data << std::endl;
-			data_received = true;
-			cond.notify_one();
-			std::cout << "notified" << std::endl;
-		}
-	);
+	Uart uart("/dev/ttyACM0", Uart::UartBaud::BAUD9600, 100);
+	const mcu_client::ClientData test_data("{\"ctor_id\" : 1, \"gpio_id\" : 25}");
 	
 	// WHEN
-	Uart instance("/dev/ttyACM0", Uart::UartBaud::BAUD9600, 100);
+	UartConnection instance(
+		&uart,
+		1000,
+		"MSG_HEADER",
+		"MSG_TAIL"
+	);
 	mcu_client::ClientData result("");
 
 	// THEN
-	ASSERT_NO_THROW(instance.start_listening(test_listener));
-	ASSERT_TRUE(instance.is_listening());
-	
-	std::unique_lock lock(mux);
 	ASSERT_NO_THROW(instance.send(test_data));
-	
-	cond.wait(lock);
-	ASSERT_NO_THROW(instance.stop_listening());
-	ASSERT_FALSE(instance.is_listening());
+	ASSERT_NO_THROW(result = instance.read());
+	std::cout << result << std::endl;
 }

@@ -1,18 +1,17 @@
 #ifndef	UART_CONNECTION_HPP
 #define	UART_CONNECTION_HPP
 
-#include "custom_listener.hpp"
-#include "custom_receiver.hpp"
-#include "listener.hpp"
-#include "mcu_client_types.hpp"
-#include "server_connection.hpp"
-#include "uart.hpp"
-#include <atomic>
-#include <memory>
+#include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <stdexcept>
 #include <string>
-#include <thread>
+
+#include "custom_listener.hpp"
+#include "custom_receiver.hpp"
+#include "mcu_client_types.hpp"
+#include "server_connection.hpp"
+#include "uart.hpp"
 
 namespace mcu_client_utl {
 
@@ -23,64 +22,67 @@ namespace mcu_client_utl {
 		UartConnection(const UartConnection& other) = delete;
 		UartConnection& operator=(const UartConnection& other) = delete;
 
-		void send(const mcu_client::ClientData&) const override;
-		mcu_client::ClientData read() const override;
+		void send(const UartData&) const override;
+		UartData read() const override;
 	private:
 		Uart *m_uart;
 		unsigned int m_timeout_ms;
 		UartData m_head;
 		UartData m_tail;
-		mcu_server_utl::CustomReceiver m_receiver;
+
+		mutable mcu_server_utl::CustomReceiver m_receiver;
+		mutable std::mutex m_mux;
+		mutable std::condition_variable m_cond;
+		mutable UartData m_received_data;
+		mutable bool m_is_data_received;
 	};
 
-	inline UartConnection::UartConnection(Uart *uart, unsigned int timeout_ms, const UartData& head, const UartData& tail): m_uart(uart), m_timeout_ms(timeout_ms), m_head(head), m_tail(tail), m_receiver(head, tail) {
+	inline UartConnection::UartConnection(Uart *uart, unsigned int timeout_ms, const UartData& head, const UartData& tail): m_uart(uart), m_timeout_ms(timeout_ms), m_head(head), m_tail(tail), m_receiver(head, tail), m_received_data(""), m_is_data_received(false) {
 		if (!m_uart) {
 			throw std::invalid_argument("invalid uart ptr received");
 		}
+		m_receiver.set_listener(
+			mcu_server_utl::CustomListener<UartData>(
+				[this](const UartData& data) {
+					std::unique_lock lock(m_mux);
+					m_received_data = data;
+					m_is_data_received = true;
+					m_cond.notify_one();
+				}
+			)
+		);
 	}
 
-	inline void UartConnection::send(const mcu_client::ClientData& data) const {
+	inline void UartConnection::send(const UartData& data) const {
+		std::lock_guard lock(m_mux);
 		m_uart->start_listening(
 			mcu_server_utl::CustomListener<UartData>(
-				[](const UartData& data) {
-
+				[this](const UartData& data) {
+					m_receiver.feed(data);
 				}
 			)
 		);
 		m_uart->send(m_head + data + m_tail);
 	}
 
-	inline mcu_client::ClientData UartConnection::read() const {
-
-	const mcu_client::ClientData test_data("MSG_HEADER{\"ctor_id\" : 0, \"gpio_dir\" : 1, \"gpio_id\" : 25}MSG_TAIL");
-	bool data_received(false);
-	std::mutex mux;
-	std::condition_variable cond;
-
-	CustomListener<mcu_client::ClientData> test_listener(
-		[&data_received, &mux, &cond](const mcu_client::ClientData& data) {
-			std::unique_lock lock(mux);
-			std::cout << "data received: " << data << std::endl;
-			data_received = true;
-			cond.notify_one();
-			std::cout << "notified" << std::endl;
+	inline UartConnection::UartData UartConnection::read() const {
+		std::unique_lock lock(m_mux);
+		if (!m_uart->is_listening()) {
+			throw std::runtime_error("send function should be called prior to read");
 		}
-	);
-	
-	// WHEN
-	Uart instance("/dev/ttyACM0", Uart::UartBaud::BAUD9600, 100);
-	mcu_client::ClientData result("");
-
-	// THEN
-	ASSERT_NO_THROW(instance.start_listening(test_listener));
-	ASSERT_TRUE(instance.is_listening());
-	
-	std::unique_lock lock(mux);
-	ASSERT_NO_THROW(instance.send(test_data));
-	
-	cond.wait(lock);
-	ASSERT_NO_THROW(instance.stop_listening());
-	ASSERT_FALSE(instance.is_listening());
+		if (m_is_data_received) {
+			m_uart->stop_listening();
+			return m_received_data;
+		}
+		auto wait_result = m_cond.wait_for(lock, std::chrono::milliseconds(m_timeout_ms));
+		m_uart->stop_listening();
+		if (std::cv_status::timeout == wait_result) {
+			throw std::runtime_error("timeout waiting for server response exceeded");
+		}
+		auto result = m_received_data;
+		m_is_data_received = false;
+		m_received_data = "";
+		return result;
 	}
 }
 
