@@ -12,8 +12,9 @@ using namespace mcu_server_utl;
 
 TEST(ut_uart_connection, ctor_dtor) {
 	// GIVEN
-	Uart uart("/dev/ttyACM0", Uart::UartBaud::BAUD9600, 100);
-
+	const std::string uart_path("/dev/ttyACM0");
+	const UartConnection::UartBaud baud(UartConnection::UartBaud::BAUD9600);
+	
 	// WHEN
 	UartConnection *instance_ptr(nullptr);
 
@@ -21,7 +22,8 @@ TEST(ut_uart_connection, ctor_dtor) {
 	ASSERT_NO_THROW(
 		(
 			instance_ptr = new UartConnection(
-				&uart,
+				uart_path,
+				baud,
 				1000,
 				"MSG_HEADER",
 				"MSG_TAIL"
@@ -36,12 +38,14 @@ TEST(ut_uart_connection, ctor_dtor) {
 
 TEST(ut_uart_connection, run_sanity) {
 	// GIVEN
-	Uart uart("/dev/ttyACM0", Uart::UartBaud::BAUD9600, 100);
+	const std::string uart_path("/dev/ttyACM0");
+	const UartConnection::UartBaud baud(UartConnection::UartBaud::BAUD9600);
 	const mcu_client::ClientData test_data("{\"ctor_id\" : 1, \"gpio_id\" : 25}");
 	
 	// WHEN
 	UartConnection instance(
-		&uart,
+		uart_path,
+		baud,
 		1000,
 		"MSG_HEADER",
 		"MSG_TAIL"
