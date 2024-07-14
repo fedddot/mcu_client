@@ -26,7 +26,6 @@ target_link_libraries(
     mcu_client_app
     PRIVATE
     mcu_client
-    uart
     uart_connection
 )
 

@@ -8,7 +8,6 @@
 
 #include "mcu_client.hpp"
 #include "mcu_client_types.hpp"
-#include "uart.hpp"
 #include "uart_connection.hpp"
 
 #ifndef MSG_HEADER
@@ -46,9 +45,9 @@ private:
 int main(int argc, char **argv) {
     ClientConfig cfg(argc, argv);
     try {
-        Uart uart(cfg.tty_path(), cfg.baud(), UART_POLLING_TIMEOUT_MS);
         UartConnection server_connection(
-            &uart,
+            cfg.tty_path(),
+            cfg.baud(),
             cfg.read_timeout_ms(),
             MSG_HEADER,
             MSG_TAIL
