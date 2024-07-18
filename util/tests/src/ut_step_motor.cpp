@@ -65,6 +65,7 @@ TEST(ut_step_motor, step_sanity) {
 	steps_num = 10;
 	// THEN
 	while (steps_num) {
+		std::cout << std::endl << "Running CW step #" << std::to_string(10 - steps_num + 1) << std::endl;
 		ASSERT_NO_THROW(instance.step(StepMotor::Direction::CW));
 		--steps_num;
 	}
@@ -73,6 +74,7 @@ TEST(ut_step_motor, step_sanity) {
 	steps_num = 10;
 	// THEN
 	while (steps_num) {
+		std::cout << std::endl << "Running CCW step #" << std::to_string(10 - steps_num + 1) << std::endl;
 		ASSERT_NO_THROW(instance.step(StepMotor::Direction::CCW));
 		--steps_num;
 	}
