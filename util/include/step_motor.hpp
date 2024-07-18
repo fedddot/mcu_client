@@ -30,7 +30,7 @@ namespace mcu_client_utl {
 			RH,
 			RL
 		};
-		enum: int { MOTOR_STATES_NUMBER = 4 };
+		enum: int { MOTOR_STATES_NUMBER = 8 };
 		
 		using MotorState = std::map<Shoulder, Gpo::State>;
 		using MotorStates = std::array<MotorState, MOTOR_STATES_NUMBER>;
