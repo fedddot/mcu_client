@@ -1,12 +1,12 @@
 #ifndef	STEP_MOTOR_HPP
 #define	STEP_MOTOR_HPP
 
-#include "gpo.hpp"
 #include <array>
 #include <map>
-#include <memory>
 #include <stdexcept>
 #include <string>
+
+#include "gpo.hpp"
 
 namespace mcu_client_utl {
 	class StepMotor {
