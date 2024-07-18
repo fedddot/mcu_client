@@ -46,4 +46,9 @@ target_link_libraries(
     mcu_task_type
 )
 
+add_library(step_motor INTERFACE)
+target_sources(step_motor INTERFACE ${CMAKE_CURRENT_LIST_DIR}/src/step_motor.cpp)
+target_include_directories(step_motor INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(step_motor INTERFACE gpo)
+
 add_subdirectory(tests EXCLUDE_FROM_ALL)

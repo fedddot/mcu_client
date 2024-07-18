@@ -5,6 +5,7 @@ add_executable(
 	${CMAKE_CURRENT_LIST_DIR}/src/ut_uart_connection.cpp
 	${CMAKE_CURRENT_LIST_DIR}/src/ut_gpi_proxy.cpp
 	${CMAKE_CURRENT_LIST_DIR}/src/ut_gpo_proxy.cpp
+	${CMAKE_CURRENT_LIST_DIR}/src/ut_step_motor.cpp
 )
 
 target_link_libraries(
@@ -18,6 +19,8 @@ target_link_libraries(
 	gpo_proxy
     json_data_parser
     json_data_serializer
+
+	step_motor
 
 	gtest
 )
