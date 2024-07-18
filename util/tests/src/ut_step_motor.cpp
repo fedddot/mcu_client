@@ -46,19 +46,34 @@ TEST(ut_step_motor, ctor_dtor) {
 	instance_ptr = nullptr;
 }
 
-// TEST(ut_step_motor, state_sanity) {
-// 	// GIVEN
-// 	UartConnection connection("/dev/ttyACM0", UartConnection::UartBaud::BAUD9600, 1000, "MSG_HEADER", "MSG_TAIL");
-// 	GpiProxy::McuClient client(&connection);
-// 	JsonDataParser parser;
-// 	JsonDataSerializer serializer;
+TEST(ut_step_motor, step_sanity) {
+	// GIVEN
+	UartConnection connection("/dev/ttyACM0", UartConnection::UartBaud::BAUD9600, 1000, "MSG_HEADER", "MSG_TAIL");
+	GpoProxy::McuClient client(&connection);
+	JsonDataParser parser;
+	JsonDataSerializer serializer;
+	GpoProxy lh(LH_GPIO_ID, &client, parser, serializer);
+	GpoProxy ll(LL_GPIO_ID, &client, parser, serializer);
+	GpoProxy rh(RH_GPIO_ID, &client, parser, serializer);
+	GpoProxy rl(RL_GPIO_ID, &client, parser, serializer);
 
+	// WHEN
+	StepMotor instance(&lh, &ll, &rh, &rl);
+	unsigned int steps_num(-1);
 
-// 	// WHEN
-// 	GpiProxy instance(s_testGpiId, &client, parser, serializer);
-// 	GpiProxy::State result(GpiProxy::State::LOW);
+	// WHEN
+	steps_num = 10;
+	// THEN
+	while (steps_num) {
+		ASSERT_NO_THROW(instance.step(StepMotor::Direction::CW));
+		--steps_num;
+	}
 
-// 	// THEN
-// 	ASSERT_NO_THROW(result = instance.state());
-// 	ASSERT_EQ(GpiProxy::State::HIGH, result);
-// }
+	// WHEN
+	steps_num = 10;
+	// THEN
+	while (steps_num) {
+		ASSERT_NO_THROW(instance.step(StepMotor::Direction::CCW));
+		--steps_num;
+	}
+}
