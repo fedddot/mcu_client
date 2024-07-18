@@ -20,4 +20,16 @@ target_link_libraries(
     uart
 )
 
+add_library(gpi_proxy INTERFACE)
+target_include_directories(gpi_proxy INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(
+    gpi_proxy
+    INTERFACE
+    gpi
+    client
+    data_lib
+    parser
+    serializer
+)
+
 add_subdirectory(tests EXCLUDE_FROM_ALL)
