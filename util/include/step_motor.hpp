@@ -66,6 +66,12 @@ namespace mcu_client_utl {
 		m_curr_state = next_state_iter;
 	}
 
+	inline void StepMotor::apply_state(const MotorState& state) {
+		for (auto item: state) {
+			m_gpos[item.first]->set_state(item.second);
+		}
+	}
+
 	inline StepMotor::MotorGpos StepMotor::init_gpos(Gpo *lh_gpo, Gpo *ll_gpo, Gpo *rh_gpo, Gpo *rl_gpo) {
 		MotorGpos gpos {
 			{Shoulder::LH, lh_gpo},
