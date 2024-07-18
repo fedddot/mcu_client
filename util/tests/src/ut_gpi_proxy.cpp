@@ -12,6 +12,8 @@
 using namespace mcu_client_utl;
 using namespace mcu_server_utl;
 
+static const int s_testGpiId(10);
+
 TEST(ut_gpi_proxy, ctor_dtor) {
 	// GIVEN
 	UartConnection connection("/dev/ttyACM0", UartConnection::UartBaud::BAUD9600, 1000, "MSG_HEADER", "MSG_TAIL");
@@ -26,7 +28,7 @@ TEST(ut_gpi_proxy, ctor_dtor) {
 	// THEN
 	ASSERT_NO_THROW(
 		(
-			instance_ptr = new GpiProxy(25, &client, parser, serializer)
+			instance_ptr = new GpiProxy(s_testGpiId, &client, parser, serializer)
 		)
 	);
 	ASSERT_NE(nullptr, instance_ptr);
@@ -44,7 +46,7 @@ TEST(ut_gpi_proxy, state_sanity) {
 
 
 	// WHEN
-	GpiProxy instance(25, &client, parser, serializer);
+	GpiProxy instance(s_testGpiId, &client, parser, serializer);
 	GpiProxy::State result(GpiProxy::State::LOW);
 
 	// THEN
