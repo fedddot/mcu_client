@@ -20,7 +20,7 @@ namespace mcu_client_utl {
 		StepMotor(Gpo *lh_gpo, Gpo *ll_gpo, Gpo *rh_gpo, Gpo *rl_gpo);
 		StepMotor(const StepMotor& other) = default;
 		StepMotor& operator=(const StepMotor& other) = default;
-		~StepMotor() noexcept = default;
+		~StepMotor() noexcept;
 
 		void step(const Direction& dir);
 	private:
@@ -48,6 +48,16 @@ namespace mcu_client_utl {
 
 	inline StepMotor::StepMotor(Gpo *lh_gpo, Gpo *ll_gpo, Gpo *rh_gpo, Gpo *rl_gpo): m_gpos(init_gpos(lh_gpo, ll_gpo, rh_gpo, rl_gpo)), m_curr_state(s_states.begin()) {
 		apply_state(*m_curr_state);
+	}
+
+	inline StepMotor::~StepMotor() noexcept {
+		MotorState shutdown_state {
+			{Shoulder::LH, Gpo::State::LOW},
+			{Shoulder::LL, Gpo::State::LOW},
+			{Shoulder::RH, Gpo::State::LOW},
+			{Shoulder::RL, Gpo::State::LOW}
+		};
+		apply_state(shutdown_state);
 	}
 
 	inline void StepMotor::step(const Direction& dir) {

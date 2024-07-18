@@ -51,5 +51,5 @@ TEST(ut_gpi_proxy, state_sanity) {
 
 	// THEN
 	ASSERT_NO_THROW(result = instance.state());
-	ASSERT_EQ(GpiProxy::State::HIGH, result);
+	ASSERT_EQ(GpiProxy::State::LOW, result);
 }

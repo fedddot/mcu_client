@@ -7,7 +7,7 @@ const StepMotor::MotorStates mcu_client_utl::StepMotor::s_states {
 		{
 			{Shoulder::LH, Gpo::State::HIGH},
 			{Shoulder::LL, Gpo::State::LOW},
-			{Shoulder::RH, Gpo::State::HIGH},
+			{Shoulder::RH, Gpo::State::LOW},
 			{Shoulder::RL, Gpo::State::HIGH}
 		}
 	),
