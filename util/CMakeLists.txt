@@ -46,9 +46,19 @@ target_link_libraries(
     mcu_task_type
 )
 
+add_library(gpio_data_generator INTERFACE)
+target_include_directories(gpio_data_generator INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(
+    gpio_data_generator
+    INTERFACE
+    data_lib
+    gpio
+    mcu_task_type
+)
+
 add_library(step_motor INTERFACE)
 target_sources(step_motor INTERFACE ${CMAKE_CURRENT_LIST_DIR}/src/step_motor.cpp)
 target_include_directories(step_motor INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
-target_link_libraries(step_motor INTERFACE gpo)
+target_link_libraries(step_motor INTERFACE data_lib gpio_data_generator)
 
 add_subdirectory(tests EXCLUDE_FROM_ALL)
