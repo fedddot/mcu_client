@@ -33,7 +33,7 @@ namespace mcu_client {
 	inline Tdata McuClient<Tdata>::run(const Tdata& data) const {
 		m_connection->send(data);
 		while (!m_connection->readable()) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 		return m_connection->read();
 	}
