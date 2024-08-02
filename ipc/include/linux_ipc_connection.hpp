@@ -1,7 +1,10 @@
 #ifndef	LINUX_UART_IPC_CONNECTION_HPP
 #define	LINUX_UART_IPC_CONNECTION_HPP
 
+#include <atomic>
+#include <mutex>
 #include <string>
+#include <thread>
 
 #include "buffered_custom_ipc_connection.hpp"
 #include "ipc_connection.hpp"
@@ -13,8 +16,8 @@ namespace linux_mcu_ipc {
 	class UartIpcConnection: public mcu_ipc::IpcConnection<UartIpcData> {
 	public:
 		enum class Baud: int {
-			B9600,
-			B115200
+			BAUD9600,
+			BAUD115200
 		};
 		UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size);
 		UartIpcConnection(const UartIpcConnection&) = delete;
@@ -25,25 +28,46 @@ namespace linux_mcu_ipc {
 		UartIpcData read() override;
 		void send(const UartIpcData& data) const override;
 	private:
-		using CustomConnection = mcu_ipc_utl::BufferedCustomIpcConnection<UartIpcData>;
-		
+		int m_fd;
+		std::atomic<bool> m_is_listening;
+		std::thread m_listening_thread;
+		std::mutex m_mux;
+
+		using CustomConnection = mcu_ipc_utl::BufferedCustomIpcConnection<UartIpcData>;		
 		CustomConnection m_connection;
 
-		static CustomConnection *s_connection;
-		static void on_received_cb();
-		static void send_data(const UartIpcData& data);
-		static uint baud_to_uint(const Baud& baud);
+		void runner();
+		
+		static int init_tty(const std::string& tty_path, const Baud& baud);
+		static void uninit_tty(int fd);
+		static bool poll_fd(int fd);
+		static UartIpcData read_from_fd(int fd);
+		static void write_to_fd(int fd, const UartIpcData& data);
 	};
 
-	inline UartIpcConnection::UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size): m_connection(head, tail, max_buff_size, send_data) {
-		if (nullptr != s_connection) {
-			throw std::runtime_error("uart connection is already created");
-		}
-		throw std::runtime_error("NOT IMPLEMENTED");
+	inline UartIpcConnection::UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size):
+		m_fd(init_tty(tty_path, baud)),
+		m_is_listening(false),
+		m_connection(
+			head,
+			tail,
+			max_buff_size,
+			[this](const UartIpcData& data) {
+				write_to_fd(m_fd, data);
+			}
+		) {
+		
+		m_is_listening.store(true, std::memory_order_release);
+		m_listening_thread = std::thread(
+			&UartIpcConnection::runner,
+			this
+		);
 	}
 
 	inline UartIpcConnection::~UartIpcConnection() noexcept {
-		throw std::runtime_error("NOT IMPLEMENTED");
+		m_is_listening.store(false, std::memory_order_acquire);
+		m_listening_thread.join();
+		uninit_tty(m_fd);
 	}
 
 	inline bool UartIpcConnection::readable() const {
@@ -56,25 +80,6 @@ namespace linux_mcu_ipc {
 
 	inline void UartIpcConnection::send(const std::string& data) const {
 		m_connection.send(data);
-	}
-
-	inline void UartIpcConnection::on_received_cb() {
-		throw std::runtime_error("NOT IMPLEMENTED");
-	}
-
-	inline void UartIpcConnection::send_data(const UartIpcData& data) {
-		throw std::runtime_error("NOT IMPLEMENTED");
-	}
-
-	inline uint UartIpcConnection::baud_to_uint(const Baud& baud) {
-		switch (baud) {
-		case Baud::B9600:
-			return 9600;
-		case Baud::B115200:
-			return 115200;
-		default:
-			throw std::invalid_argument("unsupported baud");
-		}
 	}
 }
 
