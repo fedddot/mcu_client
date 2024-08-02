@@ -6,18 +6,18 @@
 #include <thread>
 #include <unistd.h>
 
-#include "client.hpp"
 #include "ipc_connection.hpp"
 
 namespace mcu_client {
 	template <typename Tdata>
-	class McuClient: public Client<Tdata(const Tdata&)> {
+	class McuClient {
 	public:
 		McuClient(mcu_ipc::IpcConnection<Tdata> *connection);
 		McuClient(const McuClient& other) = delete;
 		McuClient& operator=(const McuClient& other) = delete;
+		virtual ~McuClient() noexcept = default;
 
-		Tdata run(const Tdata& data) const override;
+		Tdata run(const Tdata& data) const;
 	private:
 		mcu_ipc::IpcConnection<Tdata> *m_connection;
 	};
