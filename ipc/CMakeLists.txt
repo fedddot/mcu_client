@@ -1,0 +1,6 @@
+add_library(linux_ipc_connection INTERFACE)
+target_sources(linux_ipc_connection INTERFACE ${CMAKE_CURRENT_LIST_DIR}/src/linux_ipc_connection.cpp)
+target_include_directories(linux_ipc_connection INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(linux_ipc_connection INTERFACE ipc_connection buffered_custom_ipc_connection)
+
+add_subdirectory(tests EXCLUDE_FROM_ALL)

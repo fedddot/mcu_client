@@ -1,5 +1,5 @@
 {
-    "ctor_id":  0,
+    "task_type":  0,
     "gpio_id":  25,
     "gpio_dir": 1
 }
