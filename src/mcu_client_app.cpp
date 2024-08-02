@@ -6,9 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "linux_ipc_connection.hpp"
 #include "mcu_client.hpp"
-#include "mcu_client_types.hpp"
-#include "uart_connection.hpp"
 
 #ifndef MSG_HEADER
 #   define MSG_HEADER "MSG_HEADER"
@@ -18,18 +17,16 @@
 #   define MSG_TAIL "MSG_TAIL"
 #endif
 
-#ifndef UART_POLLING_TIMEOUT_MS
-#   define UART_POLLING_TIMEOUT_MS 100U
-#endif
-
-using namespace mcu_client_utl;
 using namespace mcu_client;
+using namespace linux_mcu_ipc;
+
+using ClientData = UartIpcData;
 
 class ClientConfig {
 public:
     ClientConfig(int argc, char **argv);
     std::string tty_path() const;
-    Uart::UartBaud baud() const;
+    LinuxIpcConnection::Baud baud() const;
     unsigned int read_timeout_ms() const;
 
     ClientData read_data() const;
@@ -45,16 +42,16 @@ private:
 int main(int argc, char **argv) {
     ClientConfig cfg(argc, argv);
     try {
-        UartConnection server_connection(
+        LinuxIpcConnection connection(
             cfg.tty_path(),
             cfg.baud(),
-            cfg.read_timeout_ms(),
             MSG_HEADER,
-            MSG_TAIL
+            MSG_TAIL,
+            1000UL
         );
         cfg.log_info("MCU server connection created");
         
-        McuClient<ClientData> client(&server_connection);
+        McuClient<ClientData> client(&connection);
         cfg.log_info("MCU client created");
 
         auto data = cfg.read_data();
@@ -81,12 +78,12 @@ inline std::string ClientConfig::tty_path() const {
     return get_param("-d");
 }
 
-inline Uart::UartBaud ClientConfig::baud() const {
+inline LinuxIpcConnection::Baud ClientConfig::baud() const {
     auto baud_str = get_param("-b");
     if ("9600" == baud_str) {
-        return Uart::UartBaud::BAUD9600;
+        return LinuxIpcConnection::Baud::BAUD9600;
     } else if ("115200" == baud_str) {
-        return Uart::UartBaud::BAUD115200;
+        return LinuxIpcConnection::Baud::BAUD115200;
     }
     throw std::runtime_error("unsupported baud rate received");
 }

@@ -1,26 +1,29 @@
 #ifndef	MCU_CLIENT_HPP
 #define	MCU_CLIENT_HPP
 
+#include <chrono>
 #include <stdexcept>
+#include <thread>
+#include <unistd.h>
 
 #include "client.hpp"
-#include "server_connection.hpp"
+#include "ipc_connection.hpp"
 
 namespace mcu_client {
 	template <typename Tdata>
 	class McuClient: public Client<Tdata(const Tdata&)> {
 	public:
-		McuClient(ServerConnection<Tdata> *connection);
+		McuClient(mcu_ipc::IpcConnection<Tdata> *connection);
 		McuClient(const McuClient& other) = delete;
 		McuClient& operator=(const McuClient& other) = delete;
 
 		Tdata run(const Tdata& data) const override;
 	private:
-		ServerConnection<Tdata> *m_connection;
+		mcu_ipc::IpcConnection<Tdata> *m_connection;
 	};
 
 	template <typename Tdata>
-	inline McuClient<Tdata>::McuClient(ServerConnection<Tdata> *connection): m_connection(connection) {
+	inline McuClient<Tdata>::McuClient(mcu_ipc::IpcConnection<Tdata> *connection): m_connection(connection) {
 		if (!m_connection) {
 			throw std::invalid_argument("invalid connection ptr received");
 		}
@@ -29,6 +32,9 @@ namespace mcu_client {
 	template <typename Tdata>
 	inline Tdata McuClient<Tdata>::run(const Tdata& data) const {
 		m_connection->send(data);
+		while (!m_connection->readable()) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
 		return m_connection->read();
 	}
 }
