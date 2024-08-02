@@ -23,24 +23,22 @@ int LinuxIpcConnection::init_tty(const std::string& tty_path, const Baud& baud) 
 	if (0 > fd) {
 		throw std::runtime_error("failed to open " + tty_path);
 	}
-	auto close_and_throw = [fd](const std::exception& e) {
-		close(fd);
-		throw e;
-	};
-	auto cast_baud = [close_and_throw](const Baud& baud) {
+	auto cast_baud = [fd](const Baud& baud) {
 		switch (baud) {
 		case Baud::BAUD9600:
 			return B9600;
 		case Baud::BAUD115200:
 			return B115200;
 		default:
-			close_and_throw(std::invalid_argument("unsupported BAUD received"));
+			close(fd);
+			throw std::invalid_argument("unsupported BAUD received");
 		}
 	};
 
 	termios tty;
 	if (tcgetattr(fd, &tty)) {
-		close_and_throw(std::runtime_error("failed to retrieve UART config"));
+		close(fd);
+		throw std::runtime_error("failed to retrieve UART config");
 	}
 	tty.c_cflag &= ~PARENB;			// parity: none
 	tty.c_cflag &= ~CSTOPB;			// one stop-bit
@@ -71,7 +69,8 @@ int LinuxIpcConnection::init_tty(const std::string& tty_path, const Baud& baud) 
 	cfsetospeed(&tty, cast_baud(baud));
 
 	if (tcsetattr(fd, TCSANOW, &tty)) {
-		close_and_throw(std::runtime_error("failed to write configuration into " + tty_path));
+		close(fd);
+		throw std::runtime_error("failed to write configuration into " + tty_path);
 	}
     return fd;
 }
