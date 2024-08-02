@@ -2,6 +2,7 @@
 #define	LINUX_UART_IPC_CONNECTION_HPP
 
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -19,7 +20,7 @@ namespace linux_mcu_ipc {
 			BAUD9600,
 			BAUD115200
 		};
-		LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size);
+		LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size, unsigned int read_blocking_timeout_ms);
 		LinuxIpcConnection(const LinuxIpcConnection&) = delete;
 		LinuxIpcConnection& operator=(const LinuxIpcConnection&) = delete;
 		~LinuxIpcConnection() noexcept override;
@@ -32,7 +33,8 @@ namespace linux_mcu_ipc {
 		std::atomic<bool> m_is_listening;
 		std::thread m_listening_thread;
 		std::mutex m_mux;
-
+		std::condition_variable m_cond;
+		unsigned int m_read_blocking_timeout_ms;
 		using CustomConnection = mcu_ipc_utl::BufferedCustomIpcConnection<UartIpcData>;		
 		CustomConnection m_connection;
 
@@ -45,7 +47,7 @@ namespace linux_mcu_ipc {
 		static void write_to_fd(int fd, const UartIpcData& data);
 	};
 
-	inline LinuxIpcConnection::LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size):
+	inline LinuxIpcConnection::LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size, unsigned int read_blocking_timeout_ms):
 		m_fd(init_tty(tty_path, baud)),
 		m_is_listening(false),
 		m_connection(
@@ -55,7 +57,8 @@ namespace linux_mcu_ipc {
 			[this](const UartIpcData& data) {
 				write_to_fd(m_fd, data);
 			}
-		) {
+		),
+		m_read_blocking_timeout_ms(read_blocking_timeout_ms) {
 		
 		m_is_listening.store(true, std::memory_order_release);
 		m_listening_thread = std::thread(
