@@ -7,12 +7,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "custom_listener.hpp"
-#include "custom_receiver.hpp"
-#include "mcu_client_types.hpp"
-#include "server_connection.hpp"
-#include "uart.hpp"
-
 namespace mcu_client_utl {
 
 	class UartConnection: public mcu_client::ServerConnection<mcu_client::ClientData> {

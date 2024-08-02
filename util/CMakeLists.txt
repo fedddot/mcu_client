@@ -13,11 +13,7 @@ target_include_directories(uart_connection INTERFACE ${CMAKE_CURRENT_LIST_DIR}/i
 target_link_libraries(
     uart_connection
     INTERFACE
-    custom_listener
-    custom_receiver
-    mcu_client_types
-    server_connection
-    uart
+    ipc_connection
 )
 
 add_library(gpi_proxy INTERFACE)
