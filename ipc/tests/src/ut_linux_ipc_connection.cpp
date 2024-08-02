@@ -12,7 +12,7 @@ using namespace linux_mcu_ipc;
 TEST(ut_linux_ipc_connection, ctor_dtor) {
 	// GIVEN
 	const std::string uart_path("/dev/ttyACM0");
-	const UartIpcConnection::Baud baud(UartIpcConnection::Baud::B9600);
+	const UartIpcConnection::Baud baud(UartIpcConnection::Baud::BAUD9600);
 	const UartIpcData head("MSG_HEADER");
 	const UartIpcData tail("MSG_TAIL");
 	const std::size_t max_buff_size(1000UL);
