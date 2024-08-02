@@ -13,16 +13,16 @@ namespace linux_mcu_ipc {
 
 	using UartIpcData = std::string;
 	
-	class UartIpcConnection: public mcu_ipc::IpcConnection<UartIpcData> {
+	class LinuxIpcConnection: public mcu_ipc::IpcConnection<UartIpcData> {
 	public:
 		enum class Baud: int {
 			BAUD9600,
 			BAUD115200
 		};
-		UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size);
-		UartIpcConnection(const UartIpcConnection&) = delete;
-		UartIpcConnection& operator=(const UartIpcConnection&) = delete;
-		~UartIpcConnection() noexcept override;
+		LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size);
+		LinuxIpcConnection(const LinuxIpcConnection&) = delete;
+		LinuxIpcConnection& operator=(const LinuxIpcConnection&) = delete;
+		~LinuxIpcConnection() noexcept override;
 
 		bool readable() const override;
 		UartIpcData read() override;
@@ -45,7 +45,7 @@ namespace linux_mcu_ipc {
 		static void write_to_fd(int fd, const UartIpcData& data);
 	};
 
-	inline UartIpcConnection::UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size):
+	inline LinuxIpcConnection::LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size):
 		m_fd(init_tty(tty_path, baud)),
 		m_is_listening(false),
 		m_connection(
@@ -59,26 +59,26 @@ namespace linux_mcu_ipc {
 		
 		m_is_listening.store(true, std::memory_order_release);
 		m_listening_thread = std::thread(
-			&UartIpcConnection::runner,
+			&LinuxIpcConnection::runner,
 			this
 		);
 	}
 
-	inline UartIpcConnection::~UartIpcConnection() noexcept {
+	inline LinuxIpcConnection::~LinuxIpcConnection() noexcept {
 		m_is_listening.store(false, std::memory_order_acquire);
 		m_listening_thread.join();
 		uninit_tty(m_fd);
 	}
 
-	inline bool UartIpcConnection::readable() const {
+	inline bool LinuxIpcConnection::readable() const {
 		return m_connection.readable();
 	}
 
-	inline UartIpcData UartIpcConnection::read() {
+	inline UartIpcData LinuxIpcConnection::read() {
 		return m_connection.read();
 	}
 
-	inline void UartIpcConnection::send(const std::string& data) const {
+	inline void LinuxIpcConnection::send(const std::string& data) const {
 		m_connection.send(data);
 	}
 }

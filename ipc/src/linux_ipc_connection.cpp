@@ -9,7 +9,7 @@
 
 using namespace linux_mcu_ipc;
 
-void UartIpcConnection::runner() {
+void LinuxIpcConnection::runner() {
     while (m_is_listening.load(std::memory_order_acquire)) {
 		if (!poll_fd(m_fd)) {
 			continue;
@@ -18,7 +18,7 @@ void UartIpcConnection::runner() {
 	}
 }
 
-int UartIpcConnection::init_tty(const std::string& tty_path, const Baud& baud) {
+int LinuxIpcConnection::init_tty(const std::string& tty_path, const Baud& baud) {
 	auto fd = open(tty_path.c_str(), O_RDWR);
 	if (0 > fd) {
 		throw std::runtime_error("failed to open " + tty_path);
@@ -76,11 +76,11 @@ int UartIpcConnection::init_tty(const std::string& tty_path, const Baud& baud) {
     return fd;
 }
 
-void UartIpcConnection::uninit_tty(int fd) {
+void LinuxIpcConnection::uninit_tty(int fd) {
 	close(fd);
 }
 
-bool UartIpcConnection::poll_fd(int fd) {
+bool LinuxIpcConnection::poll_fd(int fd) {
     enum: int { POLLING_TIMEOUT_MS = 100 };
 	pollfd fd_poller {
 		.fd = fd,
@@ -109,11 +109,11 @@ inline static UartIpcData read_from_fd_wrapper(int fd) {
 	return data;
 }
 
-UartIpcData UartIpcConnection::read_from_fd(int fd) {
+UartIpcData LinuxIpcConnection::read_from_fd(int fd) {
 	return read_from_fd_wrapper(fd);
 };
 
-void UartIpcConnection::write_to_fd(int fd, const UartIpcData& data) {
+void LinuxIpcConnection::write_to_fd(int fd, const UartIpcData& data) {
 	auto write_size = write(fd, data.c_str(), data.size());
 	if (write_size != data.size()) {
 		throw std::runtime_error("failed to write to fd = " + std::to_string(fd));
