@@ -1,107 +1,72 @@
-#ifndef	PICO_IPC_CONNECTION_HPP
-#define	PICO_IPC_CONNECTION_HPP
+#ifndef	LINUX_UART_IPC_CONNECTION_HPP
+#define	LINUX_UART_IPC_CONNECTION_HPP
 
-#include "buffered_custom_ipc_connection.hpp"
-#include "hardware/gpio.h"
-#include "hardware/irq.h"
-#include "hardware/regs/intctrl.h"
-#include "hardware/uart.h"
-#include "ipc_connection.hpp"
-#include <stdexcept>
 #include <string>
 
-namespace pico_mcu_ipc {
+#include "buffered_custom_ipc_connection.hpp"
+#include "ipc_connection.hpp"
 
-	using PicoIpcData = std::string;
+namespace linux_mcu_ipc {
+
+	using UartIpcData = std::string;
 	
-	class PicoIpcConnection: public mcu_ipc::IpcConnection<PicoIpcData> {
+	class UartIpcConnection: public mcu_ipc::IpcConnection<UartIpcData> {
 	public:
 		enum class Baud: int {
 			B9600,
 			B115200
 		};
-		PicoIpcConnection(const Baud& baud, const PicoIpcData& head, const PicoIpcData& tail, const std::size_t& max_buff_size);
-		PicoIpcConnection(const PicoIpcConnection&) = delete;
-		PicoIpcConnection& operator=(const PicoIpcConnection&) = delete;
-		~PicoIpcConnection() noexcept override;
+		UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size);
+		UartIpcConnection(const UartIpcConnection&) = delete;
+		UartIpcConnection& operator=(const UartIpcConnection&) = delete;
+		~UartIpcConnection() noexcept override;
 
 		bool readable() const override;
-		PicoIpcData read() override;
-		void send(const PicoIpcData& data) const override;
+		UartIpcData read() override;
+		void send(const UartIpcData& data) const override;
 	private:
-		enum : uint {
-			UART0_TX_PIN = 0,
-			UART0_RX_PIN = 1,
-			DATA_BITS = 8,
-			STOP_BITS = 1
-		};
-		using CustomConnection = mcu_ipc_utl::BufferedCustomIpcConnection<PicoIpcData>;
+		using CustomConnection = mcu_ipc_utl::BufferedCustomIpcConnection<UartIpcData>;
 		
 		CustomConnection m_connection;
 
 		static CustomConnection *s_connection;
 		static void on_received_cb();
-		static void send_data(const PicoIpcData& data);
+		static void send_data(const UartIpcData& data);
 		static uint baud_to_uint(const Baud& baud);
 	};
 
-	inline PicoIpcConnection::PicoIpcConnection(const Baud& baud, const PicoIpcData& head, const PicoIpcData& tail, const std::size_t& max_buff_size): m_connection(head, tail, max_buff_size, send_data) {
+	inline UartIpcConnection::UartIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size): m_connection(head, tail, max_buff_size, send_data) {
 		if (nullptr != s_connection) {
-			throw std::runtime_error("uart0 connection is already created");
+			throw std::runtime_error("uart connection is already created");
 		}
-		uart_init(uart0, baud_to_uint(baud));
-		gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
-    	gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
-		uart_set_baudrate(uart0, baud_to_uint(baud));
-		uart_set_hw_flow(uart0, false, false);
-		uart_set_format(uart0, DATA_BITS, STOP_BITS, UART_PARITY_NONE);
-		uart_set_fifo_enabled(uart0, false);
-	    irq_set_exclusive_handler(UART0_IRQ, &on_received_cb);
-    	irq_set_enabled(UART0_IRQ, true);
-    	uart_set_irq_enables(uart0, true, false);
-		s_connection = &m_connection;
+		throw std::runtime_error("NOT IMPLEMENTED");
 	}
 
-	inline PicoIpcConnection::~PicoIpcConnection() noexcept {
-		irq_set_enabled(UART0_IRQ, false);
-    	uart_set_irq_enables(uart0, false, false);
-    	uart_deinit(uart0);
-		gpio_set_function(UART0_TX_PIN, GPIO_FUNC_NULL);
-    	gpio_set_function(UART0_RX_PIN, GPIO_FUNC_NULL);
-		s_connection = nullptr;
+	inline UartIpcConnection::~UartIpcConnection() noexcept {
+		throw std::runtime_error("NOT IMPLEMENTED");
 	}
 
-	inline bool PicoIpcConnection::readable() const {
+	inline bool UartIpcConnection::readable() const {
 		return m_connection.readable();
 	}
 
-	inline PicoIpcData PicoIpcConnection::read() {
+	inline UartIpcData UartIpcConnection::read() {
 		return m_connection.read();
 	}
 
-	inline void PicoIpcConnection::send(const std::string& data) const {
+	inline void UartIpcConnection::send(const std::string& data) const {
 		m_connection.send(data);
 	}
 
-	inline void PicoIpcConnection::on_received_cb() {
-		PicoIpcData data("");
-		while (uart_is_readable(uart0)) {
-			data.push_back(uart_getc(uart0));
-		}
-		if (!s_connection) {
-			return;
-		}
-		s_connection->feed(data);
-		irq_clear(UART0_IRQ);
+	inline void UartIpcConnection::on_received_cb() {
+		throw std::runtime_error("NOT IMPLEMENTED");
 	}
 
-	inline void PicoIpcConnection::send_data(const PicoIpcData& data) {
-		for (auto ch: data) {
-			uart_putc(uart0, ch);
-		}
+	inline void UartIpcConnection::send_data(const UartIpcData& data) {
+		throw std::runtime_error("NOT IMPLEMENTED");
 	}
 
-	inline uint PicoIpcConnection::baud_to_uint(const Baud& baud) {
+	inline uint UartIpcConnection::baud_to_uint(const Baud& baud) {
 		switch (baud) {
 		case Baud::B9600:
 			return 9600;
@@ -113,4 +78,4 @@ namespace pico_mcu_ipc {
 	}
 }
 
-#endif // PICO_IPC_CONNECTION_HPP
+#endif // LINUX_UART_IPC_CONNECTION_HPP
