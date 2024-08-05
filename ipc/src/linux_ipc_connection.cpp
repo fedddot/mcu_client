@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <sys/poll.h>
@@ -14,7 +15,11 @@ void LinuxIpcConnection::runner() {
 		if (!poll_fd(m_fd)) {
 			continue;
 		}
+		std::unique_lock lock(m_mux);
 		m_connection.feed(read_from_fd(m_fd));
+		if (m_connection.readable()) {
+			m_cond.notify_one();
+		}
 	}
 }
 
@@ -118,6 +123,3 @@ void LinuxIpcConnection::write_to_fd(int fd, const UartIpcData& data) {
 		throw std::runtime_error("failed to write to fd = " + std::to_string(fd));
 	}
 }
-
-
-
