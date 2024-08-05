@@ -2,6 +2,8 @@
 #define	LINUX_UART_IPC_CONNECTION_HPP
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -31,7 +33,9 @@ namespace linux_mcu_ipc {
 		int m_fd;
 		std::atomic<bool> m_is_listening;
 		std::thread m_listening_thread;
-		std::mutex m_mux;
+		mutable std::mutex m_mux;
+		mutable std::condition_variable m_cond;
+		const std::size_t m_readable_timeout_ms;
 
 		using CustomConnection = mcu_ipc_utl::BufferedCustomIpcConnection<UartIpcData>;		
 		CustomConnection m_connection;
@@ -48,6 +52,7 @@ namespace linux_mcu_ipc {
 	inline LinuxIpcConnection::LinuxIpcConnection(const std::string& tty_path, const Baud& baud, const UartIpcData& head, const UartIpcData& tail, const std::size_t& max_buff_size):
 		m_fd(init_tty(tty_path, baud)),
 		m_is_listening(false),
+		m_readable_timeout_ms(5000UL),
 		m_connection(
 			head,
 			tail,
@@ -71,7 +76,14 @@ namespace linux_mcu_ipc {
 	}
 
 	inline bool LinuxIpcConnection::readable() const {
-		return m_connection.readable();
+		while (true) {
+			std::unique_lock lock(m_mux);
+			if (m_connection.readable()) {
+				return true;
+			}
+			m_cond.wait_for(lock, std::chrono::milliseconds(m_readable_timeout_ms));
+			return m_connection.readable();
+		}
 	}
 
 	inline UartIpcData LinuxIpcConnection::read() {
