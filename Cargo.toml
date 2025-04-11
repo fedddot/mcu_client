@@ -2,5 +2,5 @@
 resolver = "2"
 members = [ 
     "ipc",
-    "ipcs/uart",
+    "ipcs/uart", "ipcs/uart_port",
 ]
