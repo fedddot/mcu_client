@@ -1,5 +1,5 @@
 [package]
-name = "ipc-uart"
+name = "uart_sized_package_reader_writer"
 version = "0.1.0"
 edition = "2024"
 
