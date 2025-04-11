@@ -2,10 +2,19 @@ use std::time::Duration;
 
 use serialport::{DataBits, FlowControl, Parity, SerialPort, StopBits};
 
+pub trait SizeEncoder {
+    fn encode(&self, size: usize) -> Result<Vec<u8>, String>;
+}
+
+pub trait SizeDecoder {
+    fn raw_data_size(&self) -> usize;
+    fn decode(&self, raw_data: &[u8]) -> usize;
+}
+
 pub struct UartMcuClient {
     port: Box<dyn SerialPort>,
     preamble: Vec<u8>,
-    encoded_size_length: usize,
+    size_encoder: ,
 }
 
 impl UartMcuClient {
