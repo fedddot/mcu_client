@@ -3,6 +3,6 @@ resolver = "2"
 members = [ 
     "data/stepper_motor_data", 
     "ipc",
-    "ipcs/uart",
+    "ipcs/uart_sized_package_reader_writer",
     "ipcs/uart_port",
 ]
