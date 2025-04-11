@@ -100,6 +100,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "WITH MCU CONNECTED ONLY"]
     fn new_sanity() {
         // GIVEN
         let port_name = "/dev/ttyACM0";
