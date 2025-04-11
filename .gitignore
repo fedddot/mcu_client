@@ -6,7 +6,7 @@ target
 !.github
 !*.dockerfile
 !*.json
-!*.ts
+!*.rs
 !*.toml
 !*.yml
 !*.py
