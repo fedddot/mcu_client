@@ -1,0 +1,13 @@
+*.*
+.vscode
+target
+!.devcontainer
+!.gitignore
+!.github
+!*.dockerfile
+!*.json
+!*.ts
+!*.toml
+!*.yml
+!*.py
+!*.proto
