@@ -4,5 +4,5 @@ members = [
     "data/stepper_motor_data", 
     "ipc",
     "ipcs/uart_sized_package_reader_writer",
-    "ipcs/uart_port",
+    "ipcs/uart_port", "clients/uart_json_stepper_motor_service_client",
 ]
