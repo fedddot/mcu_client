@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = [ 
+    "data/stepper_motor_data", 
     "ipc",
-    "ipcs/uart", "ipcs/uart_port",
+    "ipcs/uart",
+    "ipcs/uart_port",
 ]
