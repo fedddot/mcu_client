@@ -1,8 +1,10 @@
 [package]
-name = "uart-mcu-client"
+name = "ipc-uart"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 libudev = "0.3.0"
 serialport = "4.7.1"
+
+ipc = { path = "../../ipc" }
