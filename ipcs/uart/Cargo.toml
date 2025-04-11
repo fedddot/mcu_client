@@ -8,3 +8,4 @@ libudev = "0.3.0"
 serialport = "4.7.1"
 
 ipc = { path = "../../ipc" }
+uart_port = { path = "../uart_port" }
