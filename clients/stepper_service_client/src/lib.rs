@@ -47,3 +47,97 @@ pub trait DataTransformer<Input, Output, Error> {
 }
 
 mod default_transformers;
+
+#[cfg(test)]
+mod test {
+    use std::time::Duration;
+
+    use serde_json::{json, Value};
+    use stepper_motor_data::StepperMotorDirection;
+
+    use super::*;
+
+    #[test]
+    fn client_new_sanity() {
+        // GIVEN
+        let test_request = StepperMotorRequest {
+            motor_id: "test_motor".to_string(),
+            direction: StepperMotorDirection::CCW,
+            steps_number: 15,
+            step_duration: Duration::from_millis(1234),
+        };
+        let expected_response = StepperMotorResponse::SUCCESS;
+
+        // THEN
+        let _ = StepperServiceClient::new(
+            Box::new(TestIpcReader {
+                expected_response,
+            }),
+            Box::new(TestIpcWriter {
+                test_request,
+            }),
+            Box::new(JsonRequestSerializer),
+            Box::new(JsonResponseParser),
+        );
+    }
+
+    #[test]
+    fn client_run_request_sanity() {
+        // GIVEN
+        let test_request = StepperMotorRequest {
+            motor_id: "test_motor".to_string(),
+            direction: StepperMotorDirection::CCW,
+            steps_number: 15,
+            step_duration: Duration::from_millis(1234),
+        };
+        let expected_response = StepperMotorResponse::SUCCESS;
+        
+        // WHEN
+        let mut instance = StepperServiceClient::new(
+            Box::new(TestIpcReader {
+                expected_response: expected_response.clone(),
+            }),
+            Box::new(TestIpcWriter {
+                test_request: test_request.clone(),
+            }),
+            Box::new(JsonRequestSerializer),
+            Box::new(JsonResponseParser),
+        );
+
+        // THEN
+        let result = instance.run_request(&test_request);
+        assert!(result.is_ok());
+    }
+
+    struct TestIpcReader {
+        expected_response: StepperMotorResponse,
+    }
+
+    impl IpcReader<Vec<u8>, String> for TestIpcReader {
+        fn read_data(&mut self) -> Result<Vec<u8>, String> {
+            let json_val = match &self.expected_response {
+                StepperMotorResponse::SUCCESS => json!({
+                    "result": "SUCCESS",
+                }),
+                StepperMotorResponse::FAILURE(msg) => json!({
+                    "result": "FAILURE",
+                    "whar": msg,
+                }),
+            };
+            let str_data = serde_json::to_string(&json_val).unwrap();
+            Ok(str_data.as_bytes().to_vec())
+        }
+    }
+
+    struct TestIpcWriter {
+        test_request: StepperMotorRequest,
+    }
+
+    impl IpcWriter<Vec<u8>, String> for TestIpcWriter {
+        fn write_data(&mut self, data: &Vec<u8>) -> Result<(), String> {
+            let json_data: Value = serde_json::from_slice(data).unwrap();
+            assert_eq!(&self.test_request.motor_id, json_data.get("motor_id").unwrap().as_str().unwrap());
+            Ok(())
+        }
+    }
+}
