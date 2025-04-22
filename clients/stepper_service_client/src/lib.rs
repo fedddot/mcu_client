@@ -53,7 +53,7 @@ mod test {
     use std::time::Duration;
 
     use serde_json::{json, Value};
-    use stepper_motor_data::StepperMotorDirection;
+    use stepper_motor_data::{StepperMotorDirection, StepperMotorResponseCode};
 
     use super::*;
 
@@ -61,17 +61,17 @@ mod test {
     fn client_new_sanity() {
         // GIVEN
         let test_request = StepperMotorRequest {
-            motor_id: "test_motor".to_string(),
             direction: StepperMotorDirection::CCW,
             steps_number: 15,
             step_duration: Duration::from_millis(1234),
         };
-        let expected_response = StepperMotorResponse::SUCCESS;
+        let expected_response = StepperMotorResponseCode::OK;
 
         // THEN
         let _ = StepperServiceClient::new(
             Box::new(TestIpcReader {
                 expected_response,
+                expected_message: None,
             }),
             Box::new(TestIpcWriter {
                 test_request,
@@ -85,17 +85,18 @@ mod test {
     fn client_run_request_sanity() {
         // GIVEN
         let test_request = StepperMotorRequest {
-            motor_id: "test_motor".to_string(),
             direction: StepperMotorDirection::CCW,
             steps_number: 15,
             step_duration: Duration::from_millis(1234),
         };
-        let expected_response = StepperMotorResponse::SUCCESS;
+        let expected_response = StepperMotorResponseCode::OK;
+        let expected_message = "test message";
         
         // WHEN
         let mut instance = StepperServiceClient::new(
             Box::new(TestIpcReader {
                 expected_response: expected_response.clone(),
+                expected_message: Some(expected_message.to_string()),
             }),
             Box::new(TestIpcWriter {
                 test_request: test_request.clone(),
@@ -110,20 +111,20 @@ mod test {
     }
 
     struct TestIpcReader {
-        expected_response: StepperMotorResponse,
+        expected_response: StepperMotorResponseCode,
+        expected_message: Option<String>,
     }
 
     impl IpcReader<Vec<u8>, String> for TestIpcReader {
         fn read_data(&mut self) -> Result<Vec<u8>, String> {
-            let json_val = match &self.expected_response {
-                StepperMotorResponse::SUCCESS => json!({
-                    "result": "SUCCESS",
-                }),
-                StepperMotorResponse::FAILURE(msg) => json!({
-                    "result": "FAILURE",
-                    "whar": msg,
-                }),
+            let mut json_val = Value::default();
+            match &self.expected_response {
+                StepperMotorResponseCode::OK => json_val["result"] = json!(0),
+                StepperMotorResponseCode::ERROR => json_val["result"] = json!(1),
             };
+            if let Some(message) = &self.expected_message {
+                json_val["message"] = json!(message);
+            }
             let str_data = serde_json::to_string(&json_val).unwrap();
             Ok(str_data.as_bytes().to_vec())
         }
@@ -136,7 +137,7 @@ mod test {
     impl IpcWriter<Vec<u8>, String> for TestIpcWriter {
         fn write_data(&mut self, data: &Vec<u8>) -> Result<(), String> {
             let json_data: Value = serde_json::from_slice(data).unwrap();
-            assert_eq!(&self.test_request.motor_id, json_data.get("motor_id").unwrap().as_str().unwrap());
+            println!("TestIpcWriter: json data: {:?}, test_request: {:?}", json_data, self.test_request);
             Ok(())
         }
     }
