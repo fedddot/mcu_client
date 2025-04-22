@@ -65,7 +65,7 @@ mod test {
             steps_number: 15,
             step_duration: Duration::from_millis(1234),
         };
-        let expected_response = StepperMotorResponseCode::OK;
+        let expected_response = StepperMotorResponseCode::Ok;
 
         // THEN
         let _ = StepperServiceClient::new(
@@ -89,7 +89,7 @@ mod test {
             steps_number: 15,
             step_duration: Duration::from_millis(1234),
         };
-        let expected_response = StepperMotorResponseCode::OK;
+        let expected_response = StepperMotorResponseCode::Ok;
         let expected_message = "test message";
         
         // WHEN
@@ -119,8 +119,11 @@ mod test {
         fn read_data(&mut self) -> Result<Vec<u8>, String> {
             let mut json_val = Value::default();
             match &self.expected_response {
-                StepperMotorResponseCode::OK => json_val["result"] = json!(0),
-                StepperMotorResponseCode::ERROR => json_val["result"] = json!(1),
+                StepperMotorResponseCode::Ok => json_val["result"] = json!(0),
+                StepperMotorResponseCode::NotFound => json_val["result"] = json!(1),
+                StepperMotorResponseCode::Unsupported => json_val["result"] = json!(2),
+                StepperMotorResponseCode::BadRequest => json_val["result"] = json!(3),
+                StepperMotorResponseCode::Exception => json_val["result"] = json!(4),
             };
             if let Some(message) = &self.expected_message {
                 json_val["message"] = json!(message);

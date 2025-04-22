@@ -39,8 +39,11 @@ impl JsonResponseParser {
             return Err("result field has wrong format".to_string());
         };
         match result {
-            0 => Ok(StepperMotorResponseCode::OK),
-            1 => Ok(StepperMotorResponseCode::ERROR),
+            0 => Ok(StepperMotorResponseCode::Ok),
+            1 => Ok(StepperMotorResponseCode::NotFound),
+            2 => Ok(StepperMotorResponseCode::Unsupported),
+            3 => Ok(StepperMotorResponseCode::BadRequest),
+            4 => Ok(StepperMotorResponseCode::Exception),
             _ => Err(format!("unsupported result value: {}", result)),
         }
     }
@@ -130,9 +133,9 @@ mod test {
         // THEN
         let request_serial_data = serde_json::to_string(&succ_resp_val).unwrap().into_bytes();
         let request_parsed = response_parser.transform(&request_serial_data).unwrap();
-        assert_eq!(request_parsed.code, StepperMotorResponseCode::OK);
+        assert_eq!(request_parsed.code, StepperMotorResponseCode::Ok);
         let request_serial_data = serde_json::to_string(&fail_resp_val).unwrap().into_bytes();
         let request_parsed = response_parser.transform(&request_serial_data).unwrap();
-        assert_eq!(request_parsed.code, StepperMotorResponseCode::ERROR);
+        assert_eq!(request_parsed.code, StepperMotorResponseCode::NotFound);
     }
 }
