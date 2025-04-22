@@ -1,0 +1,32 @@
+use std::time::Duration;
+
+use stepper_service_client::{JsonRequestSerializer, JsonResponseParser, StepperServiceClient};
+use uart_port::UartPort;
+use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
+
+fn main() {
+    let uart_port_name = "/dev/ttyACM0";
+    let baud_rate = 115200;
+    let response_timeout = Duration::from_secs(3);
+    let preamble = b"MSG_PREAMBLE";
+    let encoded_size_len = 4;
+
+    let uart_port = UartPort::new(uart_port_name, baud_rate, response_timeout).unwrap();
+    let uart_reader = UartSizedPackageReader::new(
+        &uart_port,
+        preamble,
+        Box::new(DefaultSizeDecoder::new(encoded_size_len)),
+    );
+    let uart_writer = UartSizedPackageWriter::new(
+        &uart_port,
+        preamble,
+        Box::new(DefaultSizeEncoder::new(encoded_size_len)),
+    );
+    let client = StepperServiceClient::new(
+        Box::new(uart_reader),
+            Box::new(uart_writer),
+        Box::new(JsonRequestSerializer),
+        Box::new(JsonResponseParser),
+    );
+    println!("Hello, world!");
+}
