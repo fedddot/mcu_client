@@ -105,7 +105,7 @@ mod tests {
         // GIVEN
         let port_name = "/dev/ttyACM0";
         let test_preamble = "MSG_PREAMBLE";
-        let test_package = "bla-bla";
+        let test_package = "{\"direction\": 0, \"steps_number\": 1000, \"step_duration_ms\": 10}";
         let encoded_size_len = 4;
 
         // WHEN
@@ -127,6 +127,8 @@ mod tests {
 
         let read_result = reader.read_data();
         assert!(read_result.is_ok());
+        let read_data = read_result.unwrap();
+        println!("Received data: {:?}", String::from_utf8(read_data).unwrap());
     }
 
     fn generate_uart(port_name: &str) -> UartPort {
