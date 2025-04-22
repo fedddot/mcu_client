@@ -2,20 +2,32 @@ use std::time::Duration;
 
 #[derive(Clone)]
 pub struct StepperMotorRequest {
-    pub motor_id: String,
-    pub steps_number: usize,
     pub direction: StepperMotorDirection,
+    pub steps_number: usize,
     pub step_duration: Duration,
 }
 
 #[derive(Clone)]
 pub enum StepperMotorDirection {
-    CCW,
-    CW,
+    CCW = 0,
+    CW = 1,
 }
 
 #[derive(Clone)]
-pub enum StepperMotorResponse {
-    SUCCESS,
-    FAILURE(String),
+pub struct StepperMotorResponse {
+    pub code: StepperMotorResponseCode,
+    pub message: Option<String>,
+    pub state: Option<StepperMotorState>,
+}
+
+#[derive(Clone)]
+pub enum StepperMotorResponseCode {
+    OK = 0,
+    ERROR = 1,
+}
+
+#[derive(Clone)]
+pub enum StepperMotorState {
+    DISABLED = 0,
+    ENABLED = 1,
 }
