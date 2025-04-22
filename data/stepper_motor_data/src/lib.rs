@@ -13,7 +13,7 @@ pub enum StepperMotorDirection {
     CW = 1,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StepperMotorResponse {
     pub code: StepperMotorResponseCode,
     pub message: Option<String>,
@@ -36,7 +36,7 @@ pub enum StepperMotorResponseCode {
     ERROR = 1,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum StepperMotorState {
     DISABLED = 0,
     ENABLED = 1,

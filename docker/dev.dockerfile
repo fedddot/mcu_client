@@ -1,7 +1,7 @@
 FROM rust:slim-bookworm AS dev-img
 
 RUN apt-get update
-RUN apt-get install -y libudev-dev
+RUN apt-get install -y libudev-dev pkg-config
 RUN apt-get install -y git
 
 RUN rustup component add clippy-preview

@@ -1,7 +1,7 @@
-use client::ServiceClient;
 use ipc::{IpcReader, IpcWriter};
-use stepper_motor_data::{StepperMotorRequest, StepperMotorResponse};
 
+pub use client::ServiceClient;
+pub use stepper_motor_data::{StepperMotorDirection, StepperMotorRequest, StepperMotorResponse, StepperMotorResponseCode, StepperMotorState};
 pub type RequestSerializer = dyn DataTransformer<StepperMotorRequest, Vec<u8>, String>;
 pub type ResponseParser = dyn DataTransformer<Vec<u8>, StepperMotorResponse, String>;
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;

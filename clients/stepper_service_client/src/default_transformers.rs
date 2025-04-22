@@ -1,7 +1,6 @@
 use serde_json::{json, Value};
 
-use stepper_motor_data::{StepperMotorDirection, StepperMotorRequest, StepperMotorResponse, StepperMotorResponseCode, StepperMotorState};
-use crate::DataTransformer;
+use crate::{DataTransformer, StepperMotorRequest, StepperMotorResponse, StepperMotorResponseCode, StepperMotorState, StepperMotorDirection};
 
 pub struct JsonRequestSerializer;
 
