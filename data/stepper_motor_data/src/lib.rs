@@ -23,7 +23,7 @@ pub struct StepperMotorResponse {
 impl Default for StepperMotorResponse {
     fn default() -> Self {
         StepperMotorResponse {
-            code: StepperMotorResponseCode::ERROR,
+            code: StepperMotorResponseCode::Exception,
             message: Some("default response".to_string()),
             state: None,
         }
@@ -32,8 +32,11 @@ impl Default for StepperMotorResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StepperMotorResponseCode {
-    OK = 0,
-    ERROR = 1,
+    Ok,
+    NotFound,
+    Unsupported,
+    BadRequest,
+    Exception,
 }
 
 #[derive(Clone, Debug)]
