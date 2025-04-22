@@ -1,13 +1,13 @@
 use std::time::Duration;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StepperMotorRequest {
     pub direction: StepperMotorDirection,
     pub steps_number: usize,
     pub step_duration: Duration,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum StepperMotorDirection {
     CCW = 0,
     CW = 1,
@@ -30,7 +30,7 @@ impl Default for StepperMotorResponse {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StepperMotorResponseCode {
     OK = 0,
     ERROR = 1,
