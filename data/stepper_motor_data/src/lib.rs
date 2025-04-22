@@ -20,6 +20,16 @@ pub struct StepperMotorResponse {
     pub state: Option<StepperMotorState>,
 }
 
+impl Default for StepperMotorResponse {
+    fn default() -> Self {
+        StepperMotorResponse {
+            code: StepperMotorResponseCode::ERROR,
+            message: Some("default response".to_string()),
+            state: None,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum StepperMotorResponseCode {
     OK = 0,
