@@ -68,33 +68,19 @@ impl JsonResponseParser {
         match state {
             0 => Ok(Some(StepperMotorState::DISABLED)),
             1 => Ok(Some(StepperMotorState::ENABLED)),
-            _ => return Err(format!("unsupported state value: {}", state)),
+            _ => Err(format!("unsupported state value: {}", state)),
         }
     }
 }
 
 impl DataTransformer<Vec<u8>, StepperMotorResponse, String> for JsonResponseParser {
     fn transform(&self, input: &Vec<u8>) -> Result<StepperMotorResponse, String> {
-        let mut response = StepperMotorResponse::default();
-        
         let json_val: Value = serde_json::from_slice(input).map_err(|err| err.to_string())?;
-        
-        
-        response.code = Self::parse_result(&json_val)?;
-        response.message = Self::parse_message(&json_val)?;
-        
-        if let Some(state) = json_val.get("state") {
-            let Some(state) = state.as_i64() else {
-                return Err("state field has wrong format".to_string());
-            };
-            let state = match state {
-                0 => StepperMotorState::DISABLED,
-                1 => StepperMotorState::ENABLED,
-                _ => return Err(format!("unsupported state value: {}", state)),
-            };
-            response.state = Some(state);
-        }
-        Ok(response)
+        Ok(StepperMotorResponse {
+            code: Self::parse_result(&json_val)?,
+            message: Self::parse_message(&json_val)?,
+            state: Self::parse_state(&json_val)?,
+        })
     }
 }
 
@@ -108,15 +94,13 @@ mod test {
     fn json_request_ser_sanity() {
         // GIVEN
         let test_request = StepperMotorRequest {
-            motor_id: "test_motor".to_string(),
+            step_duration: Duration::from_millis(1823),
             steps_number: 10,
             direction: StepperMotorDirection::CCW,
-            step_duration: Duration::from_millis(1823),
         };
         let expected_value = json!({
-            "motor_id": test_request.motor_id,
-            "steps_number": test_request.steps_number,
             "direction": JsonRequestSerializer::serialize_direction(&test_request.direction),
+            "steps_number": test_request.steps_number,
             "step_duration_ms": test_request.step_duration.as_millis(),
         });
 
@@ -133,11 +117,11 @@ mod test {
     fn json_response_par_sanity() {
         // GIVEN
         let succ_resp_val = json!({
-            "result": "SUCCESS",
+            "result": 0,
         });
         let fail_msg = "the reason is ...";
         let fail_resp_val = json!({
-            "result": "FAILURE",
+            "result": 1,
             "what": fail_msg,
         });
 
@@ -147,9 +131,9 @@ mod test {
         // THEN
         let request_serial_data = serde_json::to_string(&succ_resp_val).unwrap().into_bytes();
         let request_parsed = response_parser.transform(&request_serial_data).unwrap();
-        assert!(matches!(request_parsed, StepperMotorResponse::SUCCESS));
+        assert_eq!(request_parsed.code, StepperMotorResponseCode::OK);
         let request_serial_data = serde_json::to_string(&fail_resp_val).unwrap().into_bytes();
         let request_parsed = response_parser.transform(&request_serial_data).unwrap();
-        assert!(matches!(request_parsed, StepperMotorResponse::FAILURE(_)));
+        assert_eq!(request_parsed.code, StepperMotorResponseCode::ERROR);
     }
 }
