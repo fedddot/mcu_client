@@ -45,7 +45,7 @@
 	},
 	"workspaceMount": "source=${localWorkspaceFolder},target=/usr/app/src,type=bind",
     "mounts": [
-        "source=/dev/ttyACM0,target=/dev/ttyACM0,type=bind"
+        "source=/dev,target=/dev,type=bind"
     ],
 	"workspaceFolder": "/usr/app/src"
 }
