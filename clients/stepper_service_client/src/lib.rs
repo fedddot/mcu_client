@@ -61,6 +61,7 @@ mod test {
     fn client_new_sanity() {
         // GIVEN
         let test_request = StepperMotorRequest {
+            motor_id: "motor_1".to_string(),
             direction: StepperMotorDirection::CCW,
             steps_number: 15,
             step_duration: Duration::from_millis(1234),
@@ -85,6 +86,7 @@ mod test {
     fn client_run_request_sanity() {
         // GIVEN
         let test_request = StepperMotorRequest {
+            motor_id: "motor_1".to_string(),
             direction: StepperMotorDirection::CCW,
             steps_number: 15,
             step_duration: Duration::from_millis(1234),

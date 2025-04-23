@@ -2,6 +2,7 @@ use std::time::Duration;
 
 #[derive(Clone, Debug)]
 pub struct StepperMotorRequest {
+    pub motor_id: String,
     pub direction: StepperMotorDirection,
     pub steps_number: usize,
     pub step_duration: Duration,

@@ -16,6 +16,7 @@ impl JsonRequestSerializer {
 impl DataTransformer<StepperMotorRequest, Vec<u8>, String> for JsonRequestSerializer {
     fn transform(&self, input: &StepperMotorRequest) -> Result<Vec<u8>, String> {
         let json_val = json!({
+            "motor_id":         input.motor_id,
             "direction":        Self::serialize_direction(&input.direction),
             "steps_number":     input.steps_number,
             "step_duration_ms": json!(&input.step_duration.as_millis()),
@@ -96,11 +97,13 @@ mod test {
     fn json_request_ser_sanity() {
         // GIVEN
         let test_request = StepperMotorRequest {
+            motor_id: "motor_1".to_string(),
             step_duration: Duration::from_millis(1823),
             steps_number: 10,
             direction: StepperMotorDirection::CCW,
         };
         let expected_value = json!({
+            "motor_id": test_request.motor_id,
             "direction": JsonRequestSerializer::serialize_direction(&test_request.direction),
             "steps_number": test_request.steps_number,
             "step_duration_ms": test_request.step_duration.as_millis(),

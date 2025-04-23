@@ -37,24 +37,29 @@ fn main() {
     );
 
     let dur = Duration::from_millis(1);
+    let motor_id = "motor_1".to_string();
 
     let test_requests = [
         StepperMotorRequest {
+            motor_id: motor_id.clone(),
             direction: StepperMotorDirection::CCW,
             steps_number: 500,
             step_duration: dur,
         },
         StepperMotorRequest {
+            motor_id: motor_id.clone(),
             direction: StepperMotorDirection::CW,
             steps_number: 500,
             step_duration: dur,
         },
         StepperMotorRequest {
+            motor_id: motor_id.clone(),
             direction: StepperMotorDirection::CCW,
             steps_number: 500,
             step_duration: dur,
         },
         StepperMotorRequest {
+            motor_id: motor_id.clone(),
             direction: StepperMotorDirection::CW,
             steps_number: 500,
             step_duration: dur,
