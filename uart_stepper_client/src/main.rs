@@ -14,7 +14,7 @@ use uart_sized_package_reader_writer::{
 fn main() {
     let uart_port_name = "/dev/ttyACM0";
     let baud_rate = 115200;
-    let response_timeout = Duration::from_secs(3);
+    let response_timeout = Duration::from_secs(10);
     let preamble = b"MSG_PREAMBLE";
     let encoded_size_len = 4;
 
@@ -36,26 +36,28 @@ fn main() {
         Box::new(JsonResponseParser),
     );
 
+    let dur = Duration::from_millis(1);
+
     let test_requests = [
         StepperMotorRequest {
             direction: StepperMotorDirection::CCW,
-            steps_number: 10,
-            step_duration: Duration::from_millis(100),
+            steps_number: 500,
+            step_duration: dur,
         },
         StepperMotorRequest {
             direction: StepperMotorDirection::CW,
-            steps_number: 20,
-            step_duration: Duration::from_millis(50),
+            steps_number: 500,
+            step_duration: dur,
         },
         StepperMotorRequest {
             direction: StepperMotorDirection::CCW,
-            steps_number: 100,
-            step_duration: Duration::from_millis(10),
+            steps_number: 500,
+            step_duration: dur,
         },
         StepperMotorRequest {
             direction: StepperMotorDirection::CW,
-            steps_number: 1000,
-            step_duration: Duration::from_millis(1),
+            steps_number: 500,
+            step_duration: dur,
         },
     ];
     for test_request in test_requests.iter() {
