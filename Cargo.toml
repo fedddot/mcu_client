@@ -4,5 +4,5 @@ members = [
     "data/stepper_motor_data", 
     "ipc",
     "ipcs/uart_sized_package_reader_writer",
-    "ipcs/uart_port", "client", "clients/stepper_service_client", "uart_stepper_client", "data/movement_data",
+    "ipcs/uart_port", "client", "clients/stepper_service_client", "uart_stepper_client", "data/movement_data", "clients/movement_service_client",
 ]
