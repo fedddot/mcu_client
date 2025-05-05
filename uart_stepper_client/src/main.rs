@@ -36,7 +36,7 @@ fn main() {
         Box::new(JsonResponseParser),
     );
 
-    let dur = Duration::from_millis(1);
+    let dur = Duration::from_millis(2);
     let motor1_id = "stepper_1".to_string();
     let motor2_id = "stepper_2".to_string();
     let motor3_id = "stepper_3".to_string();
