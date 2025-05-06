@@ -12,12 +12,13 @@ pub enum MovementType {
     Rotational(RotationalMovementData),
 }
 
+#[derive(Clone, Debug)]
 pub struct MovementManagerResponse {
     pub code: ResultCode,
 	pub message: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ResultCode {
     Ok = 0,
     BadRequest = 1,
