@@ -1,9 +1,9 @@
 use ipc::{IpcReader, IpcWriter};
 
 pub use client::ServiceClient;
-pub use movement_motor_data::{MovementMotorDirection, MovementMotorRequest, MovementMotorResponse, MovementMotorResponseCode, MovementMotorState};
-pub type RequestSerializer = dyn DataTransformer<MovementMotorRequest, Vec<u8>, String>;
-pub type ResponseParser = dyn DataTransformer<Vec<u8>, MovementMotorResponse, String>;
+pub use movement_data::{MovementManagerRequest, MovementManagerResponse};
+pub type RequestSerializer = dyn DataTransformer<MovementManagerRequest, Vec<u8>, String>;
+pub type ResponseParser = dyn DataTransformer<Vec<u8>, MovementManagerResponse, String>;
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
@@ -32,8 +32,8 @@ impl MovementServiceClient {
     }
 }
 
-impl ServiceClient<MovementMotorRequest, MovementMotorResponse, String> for MovementServiceClient {
-    fn run_request(&mut self, request: &MovementMotorRequest) -> Result<MovementMotorResponse, String> {
+impl ServiceClient<MovementManagerRequest, MovementManagerResponse, String> for MovementServiceClient {
+    fn run_request(&mut self, request: &MovementManagerRequest) -> Result<MovementManagerResponse, String> {
         let serial_request = self.request_serializer.transform(request)?;
         self.raw_data_writer.write_data(&serial_request)?;
         let serial_response = self.raw_data_reader.read_data()?;
@@ -50,23 +50,23 @@ mod default_transformers;
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
-
+    use movement_data::{LinearMovementData, MovementType, ResultCode, Vector};
     use serde_json::{json, Value};
-    use movement_motor_data::{MovementMotorDirection, MovementMotorResponseCode};
 
     use super::*;
 
     #[test]
     fn client_new_sanity() {
         // GIVEN
-        let test_request = MovementMotorRequest {
-            motor_id: "motor_1".to_string(),
-            direction: MovementMotorDirection::CCW,
-            steps_number: 15,
-            step_duration: Duration::from_millis(1234),
+        let test_request = MovementManagerRequest {
+            movement_type: MovementType::Linear(
+                LinearMovementData {
+                    destination: Vector::new(1.0, 2.0, 3.0),
+                    speed: 4.0,
+                }
+            )
         };
-        let expected_response = MovementMotorResponseCode::Ok;
+        let expected_response = ResultCode::Ok;
 
         // THEN
         let _ = MovementServiceClient::new(
@@ -85,13 +85,15 @@ mod test {
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_request = MovementMotorRequest {
-            motor_id: "motor_1".to_string(),
-            direction: MovementMotorDirection::CCW,
-            steps_number: 15,
-            step_duration: Duration::from_millis(1234),
+        let test_request = MovementManagerRequest {
+            movement_type: MovementType::Linear(
+                LinearMovementData {
+                    destination: Vector::new(1.0, 2.0, 3.0),
+                    speed: 4.0,
+                }
+            )
         };
-        let expected_response = MovementMotorResponseCode::Ok;
+        let expected_response = ResultCode::Ok;
         let expected_message = "test message";
         
         // WHEN
@@ -113,7 +115,7 @@ mod test {
     }
 
     struct TestIpcReader {
-        expected_response: MovementMotorResponseCode,
+        expected_response: ResultCode,
         expected_message: Option<String>,
     }
 
@@ -121,11 +123,9 @@ mod test {
         fn read_data(&mut self) -> Result<Vec<u8>, String> {
             let mut json_val = Value::default();
             match &self.expected_response {
-                MovementMotorResponseCode::Ok => json_val["result"] = json!(0),
-                MovementMotorResponseCode::NotFound => json_val["result"] = json!(1),
-                MovementMotorResponseCode::Unsupported => json_val["result"] = json!(2),
-                MovementMotorResponseCode::BadRequest => json_val["result"] = json!(3),
-                MovementMotorResponseCode::Exception => json_val["result"] = json!(4),
+                ResultCode::Ok => json_val["result"] = json!(0),
+                ResultCode::BadRequest => json_val["result"] = json!(1),
+                ResultCode::Exception => json_val["result"] = json!(2),
             };
             if let Some(message) = &self.expected_message {
                 json_val["message"] = json!(message);
@@ -136,7 +136,7 @@ mod test {
     }
 
     struct TestIpcWriter {
-        test_request: MovementMotorRequest,
+        test_request: MovementManagerRequest,
     }
 
     impl IpcWriter<Vec<u8>, String> for TestIpcWriter {

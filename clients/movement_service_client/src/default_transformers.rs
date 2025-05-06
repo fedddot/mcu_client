@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 
 use crate::DataTransformer;
 use movement_data::{
-    LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, RotationalMovementData
+    Axis, LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, RotationalMovementData, Vector
 };
 
 pub struct JsonRequestSerializer;
@@ -23,11 +23,26 @@ impl JsonRequestSerializer {
     }
 
     fn serialize_linear_data(data: &LinearMovementData) -> Value {
-        todo!()
+        json!(
+            {
+                "destination": Self::serialize_vector(&data.destination),
+                "speed": json!(data.speed),
+            }
+        )
     }
 
-    fn serialize_rotation_data(data: &RotationalMovementData) -> Value {
-        todo!()
+    fn serialize_vector(vector: &Vector<f32>) -> Value {
+        json!(
+            {
+                "x": json!(vector.get(&Axis::X)),
+                "y": json!(vector.get(&Axis::Y)),
+                "z": json!(vector.get(&Axis::Z)),
+            }
+        )
+    }
+
+    fn serialize_rotation_data(_data: &RotationalMovementData) -> Value {
+        todo!("serialize_rotation_data is not implemented yet")
     }
 }
 
@@ -87,8 +102,6 @@ impl DataTransformer<Vec<u8>, MovementManagerResponse, String> for JsonResponseP
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
-
     use movement_data::Vector;
 
     use super::*;

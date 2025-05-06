@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Vector<T: Clone> {
 	values: HashMap<Axis, T>,
 }
