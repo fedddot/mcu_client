@@ -130,28 +130,4 @@ mod test {
         let parsed_serial_request: Value = serde_json::from_slice(&serial_request).unwrap();
         assert_eq!(expected_value, parsed_serial_request);
     }
-
-    // #[test]
-    // fn json_response_par_sanity() {
-    //     // GIVEN
-    //     let succ_resp_val = json!({
-    //         "result": 0,
-    //     });
-    //     let fail_msg = "the reason is ...";
-    //     let fail_resp_val = json!({
-    //         "result": 1,
-    //         "what": fail_msg,
-    //     });
-
-    //     // WHEN
-    //     let response_parser = JsonResponseParser;
-
-    //     // THEN
-    //     let request_serial_data = serde_json::to_string(&succ_resp_val).unwrap().into_bytes();
-    //     let request_parsed = response_parser.transform(&request_serial_data).unwrap();
-    //     assert_eq!(request_parsed.code, MovementManagerResponseCode::Ok);
-    //     let request_serial_data = serde_json::to_string(&fail_resp_val).unwrap().into_bytes();
-    //     let request_parsed = response_parser.transform(&request_serial_data).unwrap();
-    //     assert_eq!(request_parsed.code, MovementManagerResponseCode::NotFound);
-    // }
 }
