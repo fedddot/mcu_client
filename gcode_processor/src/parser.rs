@@ -11,9 +11,9 @@ impl GcodeParser {
     pub fn parse(&self, gcode_line: &str) -> Result<GcodeData, String> {
         let command = Self::parse_cmd(gcode_line)?;
         let target = Self::parse_target(gcode_line)?;
-        let rotation_center = Self::parse_rotation_center(gcode_line)?;
+        let _rotation_center = Self::parse_rotation_center(gcode_line)?;
         let speed = Self::parse_speed(gcode_line)?;
-        Ok(GcodeData { command, target, rotation_center, speed })
+        Ok(GcodeData { command, target, _rotation_center, speed })
     }
 
     fn parse_cmd(gcode_line: &str) -> Result<Command, String> {
