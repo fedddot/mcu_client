@@ -41,6 +41,10 @@ impl GcodeProcessor {
         }
     }
 
+    pub fn state(&self) -> GcodeProcessorState {
+        self.state.clone()
+    }
+
     fn process_movement_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
         let movement_request = self.generate_movement_request(gcode_data)?;
         let movement_response = self.movement_service_client.run_request(&movement_request)?;
@@ -141,7 +145,7 @@ impl Default for GcodeProcessorState {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CoordinatesType {
     Relative,
     Absolute,

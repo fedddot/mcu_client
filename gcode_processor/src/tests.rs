@@ -3,7 +3,7 @@ use mockall::mock;
 use movement_data::Axis;
 
 #[test]
-fn sanity() {
+fn sanity_linear_movements() {
     // THEN
     run_sanity_test_case(
         "G00 X1.2 Y3.4 Z5.6",
@@ -39,6 +39,32 @@ fn sanity() {
             Ok(MovementManagerResponse { code: ResultCode::Ok, message: None })
         }
     );
+}
+
+#[test]
+fn sanity_control() {
+    // GIVEN
+    let mock_service_client = MockServiceClient::default();
+    let g90_line = "G90";
+    let g91_line = "G91";
+    
+    // WHEN
+    let mut instance = GcodeProcessor::new(
+        60.0,
+        30.0,
+        Box::new(mock_service_client),
+    );
+
+    // THEN
+    assert_eq!(instance.state().coordinates_type, CoordinatesType::Absolute);
+    
+    let result = instance.process(g91_line);
+    assert!(result.is_ok());
+    assert_eq!(instance.state().coordinates_type, CoordinatesType::Relative);
+    
+    let result = instance.process(g90_line);
+    assert!(result.is_ok());
+    assert_eq!(instance.state().coordinates_type, CoordinatesType::Absolute);
 }
 
 fn run_sanity_test_case<T>(gcode_line: &str, fast_speed: f32, default_speed: f32, client_callback: T)
