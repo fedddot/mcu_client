@@ -4,91 +4,82 @@ use movement_data::{Axis, Vector};
 
 use crate::{Command, GcodeData};
 
+#[derive(Default)]
 pub struct GcodeParser;
 
 impl GcodeParser {
-    pub fn parse(&self, gcode_line: &str) -> GcodeData {
-        GcodeData {
-            command: self.parse_cmd(gcode_line),
-            target: self.parse_target(gcode_line),
-            rotation_center: self.parse_rotation_center(gcode_line),
-            speed: self.parse_speed(gcode_line),
-        }
+    pub fn parse(&self, gcode_line: &str) -> Result<GcodeData, String> {
+        let command = Self::parse_cmd(gcode_line)?;
+        let target = Self::parse_target(gcode_line)?;
+        let rotation_center = Self::parse_rotation_center(gcode_line)?;
+        let speed = Self::parse_speed(gcode_line)?;
+        Ok(GcodeData { command, target, rotation_center, speed })
     }
 
-    fn parse_cmd(&self, gcode_line: &str) -> Command {
-        let command_str = gcode_line
-            .split_whitespace()
-            .next()
-            .expect("G-code line is empty");
+    fn parse_cmd(gcode_line: &str) -> Result<Command, String> {
+        let Some(command_str) = gcode_line.split_whitespace().next() else {
+            return Err("received gcode line doesn't contain g-command".to_string());
+        };
         match command_str {
-            "G0" | "G00" => Command::G00,
-            "G1" | "G01" => Command::G01,
-            any_other => panic!("unsupported G-command received: {any_other}"),
+            "G0" | "G00" => Ok(Command::G00),
+            "G1" | "G01" => Ok(Command::G01),
+            any_other => Err(format!("unsupported G-command received: {any_other}")),
         }
     }
 
-    fn parse_target(&self, gcode_line: &str) -> Option<Vector<f32>> {
-        let mut target = Vector::new(0.0, 0.0, 0.0);
+    fn parse_vector(gcode_line: &str, axes_mapping: &HashMap<Axis, char>) -> Result<Option<Vector<f32>>, String> {
+        let mut vector = Vector::new(0.0, 0.0, 0.0);
         let mut found_any = false;
-        let axis_to_tag_mapping = HashMap::from([
-            (Axis::X, 'X'),
-            (Axis::Y, 'Y'),
-            (Axis::Z, 'Z'),
-        ]);
-        for token in gcode_line.split_whitespace() {
-            axis_to_tag_mapping
-                .iter()
-                .for_each(
-                    |(axis, tag)| {
-                        if let Some(value) = token.strip_prefix(*tag) {
-                            target.set(axis, value.parse::<f32>().unwrap_or_else(|_| panic!("Invalid {tag} value: {value}")));
-                            found_any = true;
-                        }
-                    }
-                );
+        for (axis, tag) in axes_mapping.iter() {
+            for token in gcode_line.split_whitespace() {
+                if let Some(value) = token.strip_prefix(*tag) {
+                    let Ok(value) = value.parse::<f32>() else {
+                        return Err(format!("invalid {tag} value: {value}"));
+                    };
+                    vector.set(axis, value);
+                    found_any = true;
+                }
+            }
         }
         match found_any {
-            true => Some(target),
-            false => None,
+            true => Ok(Some(vector)),
+            false => Ok(None),
         }
     }
 
-    fn parse_rotation_center(&self, gcode_line: &str) -> Option<Vector<f32>> {
-        let mut rotation_center = Vector::new(0.0, 0.0, 0.0);
-        let mut found_any = false;
-        let axis_to_tag_mapping = HashMap::from([
-            (Axis::X, 'I'),
-            (Axis::Y, 'J'),
-            (Axis::Z, 'K'),
-        ]);
-        for token in gcode_line.split_whitespace() {
-            axis_to_tag_mapping
-                .iter()
-                .for_each(
-                    |(axis, tag)| {
-                        if let Some(value) = token.strip_prefix(*tag) {
-                            rotation_center.set(axis, value.parse::<f32>().unwrap_or_else(|_| panic!("invalid {tag} value: {value}")));
-                            found_any = true;
-                        }
-                    }
-                );
-        }
-        match found_any {
-            true => Some(rotation_center),
-            false => None,
-        }
+    fn parse_target(gcode_line: &str) -> Result<Option<Vector<f32>>, String> {
+        Self::parse_vector(
+            gcode_line,
+            &HashMap::from([
+                (Axis::X, 'X'),
+                (Axis::Y, 'Y'),
+                (Axis::Z, 'Z'),
+            ]),
+        )
     }
 
-    fn parse_speed(&self, gcode_line: &str) -> Option<f32> {
+    fn parse_rotation_center(gcode_line: &str) -> Result<Option<Vector<f32>>, String> {
+        Self::parse_vector(
+            gcode_line,
+            &HashMap::from([
+                (Axis::X, 'I'),
+                (Axis::Y, 'J'),
+                (Axis::Z, 'K'),
+            ]),
+        )
+    }
+
+    fn parse_speed(gcode_line: &str) -> Result<Option<f32>, String> {
         let speed_tag = 'F';
         for token in gcode_line.split_whitespace() {
             if let Some(value) = token.strip_prefix(speed_tag) {
-                let speed_val = value.parse::<f32>().unwrap_or_else(|_| panic!("invalid speed value: {value}"));
-                return Some(speed_val);
+                let Ok(speed_val) = value.parse::<f32>() else {
+                    return Err(format!("invalid speed value: {value}"));
+                };
+                return Ok(Some(speed_val));
             }
         }
-        None
+        Ok(None)
     }
 }
 
@@ -99,14 +90,25 @@ mod tests {
     #[test]
     fn sanity() {
         // GIVEN
-        let test_gcode_str = "G0 X10.0 Y20.0 J1 F40.1";
+        let target_vector = Vector::<f32>::new(1.0, 2.0, 0.0);
+        let rotation_vector = Vector::<f32>::new(0.0, 6.7, 0.0);
+        let speed: f32 = 10.1;
+        let test_gcode_str = format!(
+            "G0 X{} Y{} J{} F{}",
+            target_vector.get(&Axis::X),
+            target_vector.get(&Axis::Y),
+            rotation_vector.get(&Axis::Y),
+            speed,
+        );
 
         // WHEN
         let instance = GcodeParser;
 
         // THEN
-        let result = instance.parse(test_gcode_str);
-        assert_eq!(Command::G00, result.command);
+        let result = instance.parse(&test_gcode_str);
+        assert!(result.is_ok());
+        let result = result.unwrap();
         println!("result: {result:?}");
+        assert_eq!(Command::G00, result.command);
     }
 }

@@ -14,4 +14,22 @@ pub struct GcodeData {
     pub speed: Option<f32>,
 }
 
+#[derive(Default)]
+pub struct GcodeProcessor {
+    parser: GcodeParser,
+}
+
+impl GcodeProcessor {
+    pub fn new() -> Self {
+        GcodeProcessor::default()
+    }
+
+    pub fn process(&self, gcode_line: &str) -> Result<(), String> {
+        let _ = self.parser.parse(gcode_line)?;
+        Err("not implemented".to_string())
+    }
+}
+
 mod parser;
+
+use parser::GcodeParser;
