@@ -1,12 +1,12 @@
 pub use movement_data::Vector;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Command {
     G00, // Rapid Position
     G01, // Linear Movement
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GcodeData {
     pub command: Command,
     pub target: Option<Vector<f32>>,

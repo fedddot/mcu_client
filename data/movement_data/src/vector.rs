@@ -18,6 +18,9 @@ impl<T: Clone> Vector<T> {
     pub fn get(&self, axis: &Axis) -> &T {
 		self.values.get(axis).unwrap()
 	}
+    pub fn set(&mut self, axis: &Axis, val: T) {
+		self.values.insert(axis.clone(), val);
+	}
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
