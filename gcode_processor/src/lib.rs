@@ -70,3 +70,35 @@ struct GcodeData {
     pub rotation_center: Option<Vector<f32>>,
     pub speed: Option<f32>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockall::mock;
+
+    #[test]
+    fn sanity() {
+        // GIVEN
+        let gcode_line = "G00 X1.2 Y3.4 Z5.6";
+        let mut mock_service_client = MockServiceClient::default();
+        let fast_speed = 7.8;
+
+        // WHEN
+        mock_service_client
+            .expect_run_request()
+            .returning(|_| Ok(MovementManagerResponse { code: ResultCode::Ok, message: None }));
+        let mut instance = GcodeProcessor::new(fast_speed, Box::new(mock_service_client));
+
+        // THEN
+        let result = instance.process(gcode_line);
+        assert!(result.is_ok());
+    }
+
+    mock! {
+        pub ServiceClient {}
+
+        impl ServiceClient<MovementManagerRequest, MovementManagerResponse, String> for ServiceClient {
+            fn run_request(&mut self, request: &MovementManagerRequest) -> Result<MovementManagerResponse, String>;
+        }
+    }
+}
