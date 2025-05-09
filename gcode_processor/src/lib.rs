@@ -3,18 +3,23 @@ type MovementServiceClient = dyn ServiceClient<MovementManagerRequest, MovementM
 pub struct GcodeProcessor {
     parser: GcodeParser,
     fast_movement_speed: f32,
+    default_movement_speed: f32,
     movement_service_client: Box<MovementServiceClient>,
+    state: GcodeProcessorState,
 }
 
 impl GcodeProcessor {
     pub fn new(
         fast_movement_speed: f32,
+        default_movement_speed: f32,
         movement_service_client: Box<MovementServiceClient>,
     ) -> Self {
         Self {
             parser: GcodeParser,
             fast_movement_speed,
+            default_movement_speed,
             movement_service_client,
+            state: GcodeProcessorState::default(),
         }
     }
 
@@ -23,7 +28,10 @@ impl GcodeProcessor {
         let movement_request = self.generate_movement_request(&gcode_data)?;
         let movement_response = self.movement_service_client.run_request(&movement_request)?;
         match movement_response.code {
-            ResultCode::Ok => Ok(()),
+            ResultCode::Ok => {
+                self.state = Self::apply_movement_to_state(&self.state, &movement_request.movement_type);
+                Ok(())
+            },
             _ => {
                 let mut error_msg = "a failure response received from the movement service".to_string();
                 if let Some(what) = movement_response.message {
@@ -34,7 +42,45 @@ impl GcodeProcessor {
         }
     }
 
+    fn apply_movement_to_state(state: &GcodeProcessorState, movement: &MovementType) -> GcodeProcessorState {
+        let mut state = state.clone();
+        let movement_vector = match movement {
+            MovementType::Linear(data) => &data.destination,
+            MovementType::Rotational(_) => panic!("rotational movement is not implemented yet"),
+        };
+        state.current_position = Self::add_vectors(&state.current_position, movement_vector);
+        state
+    }
+
+    fn sub_vectors(one: &Vector<f32>, other: &Vector<f32>) -> Vector<f32> {
+        let mut result = Vector::new(0.0, 0.0, 0.0);
+        [Axis::X, Axis::Y, Axis::Z]
+            .iter()
+            .for_each(|axis| result.set(axis, one.get(axis) - other.get(axis)));
+        result
+    }
+
+    fn add_vectors(one: &Vector<f32>, other: &Vector<f32>) -> Vector<f32> {
+        let mut result = Vector::new(0.0, 0.0, 0.0);
+        [Axis::X, Axis::Y, Axis::Z]
+            .iter()
+            .for_each(|axis| result.set(axis, one.get(axis) + other.get(axis)));
+        result
+    }
+
+    fn apply_state_to_gcode_data(gcode_data: &GcodeData, state: &GcodeProcessorState) -> GcodeData {
+        let mut gcode_data = gcode_data.clone();
+        if state.coordinates_type == CoordinatesType::Relative {
+            return gcode_data;
+        }
+        if let Some(abs_target) = &gcode_data.target {
+            gcode_data.target = Some(Self::sub_vectors(abs_target, &state.current_position));
+        }
+        gcode_data
+    }
+
     fn generate_movement_request(&self, gcode_data: &GcodeData) -> Result<MovementManagerRequest, String> {
+        let gcode_data = Self::apply_state_to_gcode_data(gcode_data, &self.state);
         match &gcode_data.command {
             Command::G00 => {
                 let Some(destination) = &gcode_data.target else {
@@ -46,15 +92,52 @@ impl GcodeProcessor {
                 };
                 Ok(MovementManagerRequest { movement_type: MovementType::Linear(movement_data) })
             },
+            Command::G01 => {
+                let Some(destination) = &gcode_data.target else {
+                    return Err("G01 gcode data must have target vector".to_string());
+                };
+                let speed = match gcode_data.speed {
+                    Some(speed_data) => speed_data,
+                    _ => self.default_movement_speed,
+                };
+                let movement_data = LinearMovementData {
+                    destination: destination.clone(),
+                    speed,
+                };
+                Ok(MovementManagerRequest { movement_type: MovementType::Linear(movement_data) })
+            },
             any_other => Err(format!("unsupported command received: {any_other:?}")),
         }
     }
 }
 
+#[derive(Clone)]
+struct GcodeProcessorState {
+    pub current_position: Vector<f32>,
+    pub coordinates_type: CoordinatesType,
+}
+
+impl Default for GcodeProcessorState {
+    fn default() -> Self {
+        Self {
+            current_position: Vector::new(0.0, 0.0, 0.0),
+            coordinates_type: CoordinatesType::Absolute,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub enum CoordinatesType {
+    Relative,
+    Absolute,
+}
+
 mod parser;
 
+use std::os::linux::raw::stat;
+
 use client::ServiceClient;
-use movement_data::{LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, Vector};
+use movement_data::{Axis, LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, Vector};
 use parser::GcodeParser;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -72,33 +155,4 @@ struct GcodeData {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use mockall::mock;
-
-    #[test]
-    fn sanity() {
-        // GIVEN
-        let gcode_line = "G00 X1.2 Y3.4 Z5.6";
-        let mut mock_service_client = MockServiceClient::default();
-        let fast_speed = 7.8;
-
-        // WHEN
-        mock_service_client
-            .expect_run_request()
-            .returning(|_| Ok(MovementManagerResponse { code: ResultCode::Ok, message: None }));
-        let mut instance = GcodeProcessor::new(fast_speed, Box::new(mock_service_client));
-
-        // THEN
-        let result = instance.process(gcode_line);
-        assert!(result.is_ok());
-    }
-
-    mock! {
-        pub ServiceClient {}
-
-        impl ServiceClient<MovementManagerRequest, MovementManagerResponse, String> for ServiceClient {
-            fn run_request(&mut self, request: &MovementManagerRequest) -> Result<MovementManagerResponse, String>;
-        }
-    }
-}
+mod tests;
