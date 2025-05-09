@@ -1,0 +1,11 @@
+[package]
+name = "movement_service_client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde_json = "*"
+ipc = { path = "../../ipc" }
+client = { path = "../../client" }
+uart_sized_package_reader_writer = { path = "../../ipcs/uart_sized_package_reader_writer" }
+movement_data = { path = "../../data/movement_data" }

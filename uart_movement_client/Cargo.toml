@@ -1,0 +1,10 @@
+[package]
+name = "uart_movement_client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+uart_sized_package_reader_writer = { path = "../ipcs/uart_sized_package_reader_writer" }
+uart_port = { path = "../ipcs/uart_port" }
+movement_service_client = { path = "../clients/movement_service_client" }
+movement_data = { version = "0.1.0", path = "../data/movement_data" }
