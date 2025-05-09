@@ -1,7 +1,17 @@
-type MovementServiceClient = dyn ServiceClient<MovementManagerRequest, MovementManagerResponse, String>;
+use client::ServiceClient;
+use movement_data::{
+    LinearMovementData,
+    MovementManagerRequest,
+    MovementManagerResponse,
+    MovementType,
+    ResultCode,
+    Vector
+};
+
+pub type MovementServiceClient = dyn ServiceClient<MovementManagerRequest, MovementManagerResponse, String>;
 
 pub struct GcodeProcessor {
-    parser: GcodeParser,
+    parser: parser::GcodeParser,
     fast_movement_speed: f32,
     default_movement_speed: f32,
     movement_service_client: Box<MovementServiceClient>,
@@ -15,7 +25,7 @@ impl GcodeProcessor {
         movement_service_client: Box<MovementServiceClient>,
     ) -> Self {
         Self {
-            parser: GcodeParser,
+            parser: parser::GcodeParser,
             fast_movement_speed,
             default_movement_speed,
             movement_service_client,
@@ -48,24 +58,8 @@ impl GcodeProcessor {
             MovementType::Linear(data) => &data.destination,
             MovementType::Rotational(_) => panic!("rotational movement is not implemented yet"),
         };
-        state.current_position = Self::add_vectors(&state.current_position, movement_vector);
+        state.current_position = vector_operations::add_vectors(&state.current_position, movement_vector);
         state
-    }
-
-    fn sub_vectors(one: &Vector<f32>, other: &Vector<f32>) -> Vector<f32> {
-        let mut result = Vector::new(0.0, 0.0, 0.0);
-        [Axis::X, Axis::Y, Axis::Z]
-            .iter()
-            .for_each(|axis| result.set(axis, one.get(axis) - other.get(axis)));
-        result
-    }
-
-    fn add_vectors(one: &Vector<f32>, other: &Vector<f32>) -> Vector<f32> {
-        let mut result = Vector::new(0.0, 0.0, 0.0);
-        [Axis::X, Axis::Y, Axis::Z]
-            .iter()
-            .for_each(|axis| result.set(axis, one.get(axis) + other.get(axis)));
-        result
     }
 
     fn apply_state_to_gcode_data(gcode_data: &GcodeData, state: &GcodeProcessorState) -> GcodeData {
@@ -74,7 +68,7 @@ impl GcodeProcessor {
             return gcode_data;
         }
         if let Some(abs_target) = &gcode_data.target {
-            gcode_data.target = Some(Self::sub_vectors(abs_target, &state.current_position));
+            gcode_data.target = Some(vector_operations::sub_vectors(abs_target, &state.current_position));
         }
         gcode_data
     }
@@ -112,7 +106,7 @@ impl GcodeProcessor {
 }
 
 #[derive(Clone)]
-struct GcodeProcessorState {
+pub struct GcodeProcessorState {
     pub current_position: Vector<f32>,
     pub coordinates_type: CoordinatesType,
 }
@@ -132,27 +126,24 @@ pub enum CoordinatesType {
     Absolute,
 }
 
-mod parser;
-
-use std::os::linux::raw::stat;
-
-use client::ServiceClient;
-use movement_data::{Axis, LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, Vector};
-use parser::GcodeParser;
-
 #[derive(Clone, Debug, PartialEq)]
 enum Command {
     G00, // Rapid Position
     G01, // Linear Movement
+    _G02,
+    _G03,
 }
 
 #[derive(Clone, Debug)]
 struct GcodeData {
     pub command: Command,
     pub target: Option<Vector<f32>>,
-    pub rotation_center: Option<Vector<f32>>,
+    pub _rotation_center: Option<Vector<f32>>,
     pub speed: Option<f32>,
 }
+
+mod parser;
+mod vector_operations;
 
 #[cfg(test)]
 mod tests;
