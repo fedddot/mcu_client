@@ -1,0 +1,10 @@
+[package]
+name = "gcode_processor_app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gcode_processor = { version = "0.1.0", path = "../gcode_processor" }
+movement_service_client = { version = "0.1.0", path = "../clients/movement_service_client" }
+uart_port = { version = "0.1.0", path = "../ipcs/uart_port" }
+uart_sized_package_reader_writer = { version = "0.1.0", path = "../ipcs/uart_sized_package_reader_writer" }
