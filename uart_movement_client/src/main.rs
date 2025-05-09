@@ -37,12 +37,15 @@ fn main() {
         Box::new(JsonResponseParser),
     );
 
-    let speed = 4.0;
+    let speed = 130.0;
+    let dx = 20.0;
+    let dy = 30.0;
+    let dz = 40.0;
     let test_requests = [
         MovementManagerRequest {
             movement_type: MovementType::Linear(
                 LinearMovementData {
-                    destination: Vector::new(1.0, 2.0, 3.0),
+                    destination: Vector::new(dx, dy, dz),
                     speed,
                 }
             ),
@@ -50,15 +53,7 @@ fn main() {
         MovementManagerRequest {
             movement_type: MovementType::Linear(
                 LinearMovementData {
-                    destination: Vector::new(1.0, -2.0, 3.0),
-                    speed,
-                }
-            ),
-        },
-        MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(-1.0, 2.0, 3.0),
+                    destination: Vector::new(-dx, -dy, dz),
                     speed,
                 }
             ),
