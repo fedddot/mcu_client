@@ -23,6 +23,8 @@ impl GcodeParser {
         match command_str {
             "G0" | "G00" => Ok(Command::G00),
             "G1" | "G01" => Ok(Command::G01),
+            "G90" =>        Ok(Command::G90),
+            "G91" =>        Ok(Command::G91),
             any_other => Err(format!("unsupported G-command received: {any_other}")),
         }
     }

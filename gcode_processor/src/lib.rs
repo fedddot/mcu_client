@@ -35,7 +35,14 @@ impl GcodeProcessor {
 
     pub fn process(&mut self, gcode_line: &str) -> Result<(), String> {
         let gcode_data = self.parser.parse(gcode_line)?;
-        let movement_request = self.generate_movement_request(&gcode_data)?;
+        match gcode_data.command {
+            Command::G90 | Command::G91 => self.process_control_command(&gcode_data),
+            _ => self.process_movement_command(&gcode_data),
+        }
+    }
+
+    fn process_movement_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
+        let movement_request = self.generate_movement_request(gcode_data)?;
         let movement_response = self.movement_service_client.run_request(&movement_request)?;
         match movement_response.code {
             ResultCode::Ok => {
@@ -49,6 +56,20 @@ impl GcodeProcessor {
                 }
                 Err(error_msg)
             }
+        }
+    }
+
+    fn process_control_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
+        match &gcode_data.command {
+            Command::G90 => {
+                self.state.coordinates_type = CoordinatesType::Absolute;
+                Ok(())
+            },
+            Command::G91 => {
+                self.state.coordinates_type = CoordinatesType::Relative;
+                Ok(())
+            },
+            any_other => Err(format!("unsupported control command received: {any_other:?}")),
         }
     }
 
@@ -100,7 +121,7 @@ impl GcodeProcessor {
                 };
                 Ok(MovementManagerRequest { movement_type: MovementType::Linear(movement_data) })
             },
-            any_other => Err(format!("unsupported command received: {any_other:?}")),
+            any_other => Err(format!("unsupported movement command received: {any_other:?}")),
         }
     }
 }
@@ -130,7 +151,8 @@ pub enum CoordinatesType {
 enum Command {
     G00, // Rapid Position
     G01, // Linear Movement
-    _G02,
+    G90, // Absolute Mode
+    G91, // Relative Mode
     _G03,
 }
 
