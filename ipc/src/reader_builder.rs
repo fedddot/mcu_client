@@ -2,8 +2,8 @@ pub use super::IpcReader;
 
 #[derive(Default)]
 pub struct IpcReaderBuilder<RawData, Data, Error> {
-    raw_data_reader: Option<Box<dyn IpcReader<Data, Error>>>,
-    raw_data_parser: Option<Box<dyn Fn(&RawData) -> Data>>,
+    raw_data_reader: Option<Box<dyn IpcReader<RawData, Error>>>,
+    raw_data_parser: Option<Fn(&RawData) -> Data>,
 }
 
 impl<RawData, Data, Error> IpcReaderBuilder<RawData, Data, Error> {
