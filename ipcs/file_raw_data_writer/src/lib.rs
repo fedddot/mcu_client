@@ -1,5 +1,22 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use std::path::PathBuf;
+
+pub type FileRawData = Vec<u8>;
+
+pub struct FileRawDataWriter {
+    file_path: PathBuf,
+}
+
+impl FileRawDataWriter {
+    pub fn new(file_path: &str) -> Self {
+        Self { file_path: PathBuf::from(file_path) }
+    }
+    
+}
+
+impl ipc::IpcWriter<FileRawData, String> for FileRawDataWriter {
+    fn write_data(&mut self, data: &FileRawData) -> Result<(), String> {
+        todo!("implement write_data");
+    }
 }
 
 #[cfg(test)]
@@ -8,7 +25,6 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+        todo!();
     }
 }
