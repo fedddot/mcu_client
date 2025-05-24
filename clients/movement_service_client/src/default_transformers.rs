@@ -7,7 +7,7 @@ pub use crate::DataTransformer;
 pub struct JsonRequestSerializer;
 
 impl JsonRequestSerializer {
-    fn serialize_movement_type(api_request: &MovementApiRequest) -> Value {
+    fn serialize_request_type(api_request: &MovementApiRequest) -> Value {
         match api_request {
             MovementApiRequest::Config { .. } => json!("CONFIG"),
             MovementApiRequest::LinearMovement { .. } => json!("LINEAR_MOVEMENT"),
@@ -15,7 +15,7 @@ impl JsonRequestSerializer {
         }
     }
 
-    fn serialize_movement_data(api_request: &MovementApiRequest) -> Value {
+    fn serialize_request_data(api_request: &MovementApiRequest) -> Value {
         match api_request {
             MovementApiRequest::Config { .. } => Self::serialize_config_data(api_request),
             MovementApiRequest::LinearMovement { .. } => Self::serialize_linear_data(api_request),
@@ -66,8 +66,8 @@ impl JsonRequestSerializer {
 impl DataTransformer<MovementApiRequest, Vec<u8>, String> for JsonRequestSerializer {
     fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
         let json_val = json!({
-            "type": Self::serialize_movement_type(input),
-            "data": Self::serialize_movement_data(input),
+            "type": Self::serialize_request_type(input),
+            "data": Self::serialize_request_data(input),
         });
         let json_string = match serde_json::to_string(&json_val) {
             Ok(str_val) => str_val,
@@ -80,17 +80,16 @@ impl DataTransformer<MovementApiRequest, Vec<u8>, String> for JsonRequestSeriali
 pub struct JsonResponseParser;
 
 impl JsonResponseParser {
-    fn parse_result(json_data: &Value) -> Result<ResultCode, String> {
+    fn parse_result(json_data: &Value) -> Result<StatusCode, String> {
         let Some(result) = json_data.get("result") else {
             return Err("missing result field".to_string());
         };
-        let Some(result) = result.as_i64() else {
+        let Some(result) = result.as_str() else {
             return Err("result field has wrong format".to_string());
         };
         match result {
-            0 => Ok(ResultCode::Ok),
-            1 => Ok(ResultCode::BadRequest),
-            2 => Ok(ResultCode::Exception),
+            "SUCCESS" => Ok(StatusCode::Success),
+            "ERROR" => Ok(StatusCode::Error),
             _ => Err(format!("unsupported result value: {}", result)),
         }
     }
@@ -107,11 +106,11 @@ impl JsonResponseParser {
     }
 }
 
-impl DataTransformer<Vec<u8>, MovementManagerResponse, String> for JsonResponseParser {
-    fn transform(&self, input: &Vec<u8>) -> Result<MovementManagerResponse, String> {
+impl DataTransformer<Vec<u8>, MovementApiResponse, String> for JsonResponseParser {
+    fn transform(&self, input: &Vec<u8>) -> Result<MovementApiResponse, String> {
         let json_val: Value = serde_json::from_slice(input).map_err(|err| err.to_string())?;
-        Ok(MovementManagerResponse {
-            code: Self::parse_result(&json_val)?,
+        Ok(MovementApiResponse {
+            status: Self::parse_result(&json_val)?,
             message: Self::parse_message(&json_val)?,
         })
     }
@@ -126,17 +125,13 @@ mod test {
     #[test]
     fn json_request_ser_sanity() {
         // GIVEN
-        let test_request = MovementApiRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(1.0, 2.0, 3.0),
-                    speed: 4.9,
-                },
-            ),
+        let test_request = MovementApiRequest::LinearMovement {
+            destination: Vector::new(1.0, 2.0, 3.0),
+            speed: 4.9,
         };
         let expected_value = json!({
-            "type": JsonRequestSerializer::serialize_movement_type(&test_request.movement_type),
-            "movement_data": JsonRequestSerializer::serialize_movement_data(&test_request.movement_type),
+            "type": JsonRequestSerializer::serialize_request_type(&test_request),
+            "data": JsonRequestSerializer::serialize_request_data(&test_request),
         });
 
         // WHEN
