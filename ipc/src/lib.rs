@@ -5,5 +5,3 @@ pub trait IpcReader<Data, Error> {
 pub trait IpcWriter<Data, Error> {
     fn write_data(&mut self, data: &Data) -> Result<(), Error>;
 }
-
-pub mod reader_builder;
