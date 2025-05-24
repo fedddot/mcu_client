@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use movement_data::{LinearMovementData, MovementType, Vector};
+use movement_data::Vector;
 use uart_port::UartPort;
 use movement_service_client::{
-    JsonRequestSerializer, JsonResponseParser, MovementManagerRequest, MovementServiceClient, ServiceClient
+    JsonRequestSerializer, JsonResponseParser, MovementApiRequest, MovementServiceClient, ServiceClient
 };
 use uart_sized_package_reader_writer::{
     DefaultSizeDecoder,
@@ -42,21 +42,13 @@ fn main() {
     let dy = 30.0;
     let dz = 40.0;
     let test_requests = [
-        MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(dx, dy, dz),
-                    speed,
-                }
-            ),
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(dx, dy, dz),
+            speed,
         },
-        MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(-dx, -dy, dz),
-                    speed,
-                }
-            ),
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(-dx, -dy, dz),
+            speed,
         },
     ];
     for test_request in test_requests.iter() {
