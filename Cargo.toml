@@ -1,7 +1,14 @@
 [workspace]
 resolver = "2"
-members = [ 
+members = [
     "ipc",
+    "ipcs/file_raw_data_writer",
     "ipcs/uart_sized_package_reader_writer",
-    "ipcs/uart_port", "client", "data/movement_data", "clients/movement_service_client", "uart_movement_client", "gcode_processor", "gcode_processor_app",
+    "ipcs/uart_port",
+    "client",
+    "data/movement_data",
+    "clients/movement_service_client",
+    "uart_movement_client",
+    "gcode_processor",
+    "gcode_processor_app",
 ]
