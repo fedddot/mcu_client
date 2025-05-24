@@ -20,7 +20,6 @@ impl FileRawDataWriter {
 impl ipc::IpcWriter<FileRawData, String> for FileRawDataWriter {
     fn write_data(&mut self, data: &FileRawData) -> Result<(), String> {
         todo!("write the data to the file");
-        todo!("and call the movement app cli to process it");
     }
 }
 
