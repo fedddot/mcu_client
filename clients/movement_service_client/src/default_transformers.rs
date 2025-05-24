@@ -1,32 +1,49 @@
 use serde_json::{json, Value};
 
-use crate::DataTransformer;
-use movement_data::{
-    Axis, LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, RotationalMovementData, Vector
-};
+use movement_data::*;
+
+pub use crate::DataTransformer;
 
 pub struct JsonRequestSerializer;
 
 impl JsonRequestSerializer {
-    fn serialize_movement_type(movement_type: &MovementType) -> Value {
-        match movement_type {
-            MovementType::Linear(_) => json!(0),
-            MovementType::Rotational(_) => json!(1),
+    fn serialize_movement_type(api_request: &MovementApiRequest) -> Value {
+        match api_request {
+            MovementApiRequest::Config { .. } => json!("CONFIG"),
+            MovementApiRequest::LinearMovement { .. } => json!("LINEAR_MOVEMENT"),
+            MovementApiRequest::RotationalMovement { .. } => json!("ROTATIONAL_MOVEMENT"),
         }
     }
 
-    fn serialize_movement_data(movement_type: &MovementType) -> Value {
-        match movement_type {
-            MovementType::Linear(linear_data) => Self::serialize_linear_data(linear_data),
-            MovementType::Rotational(rot_data) => Self::serialize_rotation_data(rot_data),
+    fn serialize_movement_data(api_request: &MovementApiRequest) -> Value {
+        match api_request {
+            MovementApiRequest::Config { .. } => Self::serialize_config_data(api_request),
+            MovementApiRequest::LinearMovement { .. } => Self::serialize_linear_data(api_request),
+            MovementApiRequest::RotationalMovement { .. } => Self::serialize_rotation_data(api_request),
         }
     }
 
-    fn serialize_linear_data(data: &LinearMovementData) -> Value {
+    fn serialize_config_data(data: &MovementApiRequest) -> Value {
+        let MovementApiRequest::Config { x_step_length, y_step_length, z_step_length } = data else {
+            panic!("Expected Config variant");
+        };
         json!(
             {
-                "destination": Self::serialize_vector(&data.destination),
-                "speed": json!(data.speed),
+                "x_step_length": x_step_length,
+                "y_step_length": y_step_length,
+                "z_step_length": z_step_length,
+            }
+        )
+    }
+
+    fn serialize_linear_data(data: &MovementApiRequest) -> Value {
+        let MovementApiRequest::LinearMovement { destination, speed } = data else {
+            panic!("Expected LinearMovement variant");
+        };
+        json!(
+            {
+                "destination": Self::serialize_vector(destination),
+                "speed": json!(speed),
             }
         )
     }
@@ -41,16 +58,16 @@ impl JsonRequestSerializer {
         )
     }
 
-    fn serialize_rotation_data(_data: &RotationalMovementData) -> Value {
+    fn serialize_rotation_data(_data: &MovementApiRequest) -> Value {
         todo!("serialize_rotation_data is not implemented yet")
     }
 }
 
-impl DataTransformer<MovementManagerRequest, Vec<u8>, String> for JsonRequestSerializer {
-    fn transform(&self, input: &MovementManagerRequest) -> Result<Vec<u8>, String> {
+impl DataTransformer<MovementApiRequest, Vec<u8>, String> for JsonRequestSerializer {
+    fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
         let json_val = json!({
-            "type":             Self::serialize_movement_type(&input.movement_type),
-            "movement_data":    Self::serialize_movement_data(&input.movement_type),
+            "type": Self::serialize_movement_type(input),
+            "data": Self::serialize_movement_data(input),
         });
         let json_string = match serde_json::to_string(&json_val) {
             Ok(str_val) => str_val,
@@ -109,7 +126,7 @@ mod test {
     #[test]
     fn json_request_ser_sanity() {
         // GIVEN
-        let test_request = MovementManagerRequest {
+        let test_request = MovementApiRequest {
             movement_type: MovementType::Linear(
                 LinearMovementData {
                     destination: Vector::new(1.0, 2.0, 3.0),
