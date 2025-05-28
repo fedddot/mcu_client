@@ -81,16 +81,16 @@ pub struct JsonResponseParser;
 
 impl JsonResponseParser {
     fn parse_result(json_data: &Value) -> Result<StatusCode, String> {
-        let Some(result) = json_data.get("result") else {
-            return Err("missing result field".to_string());
+        let Some(status) = json_data.get("status") else {
+            return Err("missing status field".to_string());
         };
-        let Some(result) = result.as_str() else {
+        let Some(status) = status.as_str() else {
             return Err("result field has wrong format".to_string());
         };
-        match result {
+        match status {
             "SUCCESS" => Ok(StatusCode::Success),
-            "ERROR" => Ok(StatusCode::Error),
-            _ => Err(format!("unsupported result value: {}", result)),
+            "FAILURE" => Ok(StatusCode::Error),
+            _ => Err(format!("unsupported result value: {}", status)),
         }
     }
 
