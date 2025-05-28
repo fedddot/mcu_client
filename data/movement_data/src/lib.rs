@@ -3,9 +3,9 @@ use std::collections::HashMap;
 #[derive(Clone, Debug)]
 pub enum MovementApiRequest {
     Config {
-        x_step_length: f32,
-        y_step_length: f32,
-        z_step_length: f32,
+        x_axis: AxisConfig,
+        y_axis: AxisConfig,
+        z_axis: AxisConfig,
     },
     LinearMovement {
         destination: Vector<f32>,
@@ -17,6 +17,21 @@ pub enum MovementApiRequest {
         angle: f32,
         speed: f32,
     },
+}
+
+#[derive(Clone, Debug)]
+pub struct AxisConfig {
+    pub stepper_config: PicoStepperConfig,
+    pub step_length: f32,
+    pub directions_mapping: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PicoStepperConfig {
+    pub enable_pin: u32,
+    pub step_pin: u32,
+    pub dir_pin: u32,
+    pub hold_time_us: u32,
 }
 
 #[derive(Clone, Debug)]
