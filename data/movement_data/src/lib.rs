@@ -3,9 +3,7 @@ use std::collections::HashMap;
 #[derive(Clone, Debug)]
 pub enum MovementApiRequest {
     Config {
-        x_axis: AxisConfig,
-        y_axis: AxisConfig,
-        z_axis: AxisConfig,
+        axes_configs: HashMap<Axis, AxisConfig>,
     },
     LinearMovement {
         destination: Vector<f32>,

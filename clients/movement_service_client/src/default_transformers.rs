@@ -24,16 +24,31 @@ impl JsonRequestSerializer {
     }
 
     fn serialize_config_data(data: &MovementApiRequest) -> Value {
-        let MovementApiRequest::Config { x_step_length, y_step_length, z_step_length } = data else {
+        let MovementApiRequest::Config { axes_configs } = data else {
             panic!("Expected Config variant");
         };
-        json!(
-            {
-                "x_step_length": x_step_length,
-                "y_step_length": y_step_length,
-                "z_step_length": z_step_length,
-            }
-        )
+        let axis_to_string = |axis: &Axis| match axis {
+            Axis::X => "x",
+            Axis::Y => "y",
+            Axis::Z => "z",
+        };
+        let mut config_data = serde_json::Value::default();
+        for (axis, config) in axes_configs {
+            let axis_config = json!(
+                {
+                    "step_length": config.step_length,
+                    "directions_mapping": config.directions_mapping,
+                    "stepper_cfg": {
+                        "enable_pin": config.stepper_config.enable_pin,
+                        "step_pin": config.stepper_config.step_pin,
+                        "dir_pin": config.stepper_config.dir_pin,
+                        "hold_time_us": config.stepper_config.hold_time_us,
+                    }
+                }
+            );
+            config_data[axis_to_string(axis)] = axis_config;
+        }
+        config_data
     }
 
     fn serialize_linear_data(data: &MovementApiRequest) -> Value {
