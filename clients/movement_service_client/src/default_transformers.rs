@@ -65,10 +65,8 @@ impl JsonRequestSerializer {
 
 impl DataTransformer<MovementApiRequest, Vec<u8>, String> for JsonRequestSerializer {
     fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
-        let json_val = json!({
-            "type": Self::serialize_request_type(input),
-            "data": Self::serialize_request_data(input),
-        });
+        let mut json_val = Self::serialize_request_data(input);
+        json_val["request_type"] = Self::serialize_request_type(input);
         let json_string = match serde_json::to_string(&json_val) {
             Ok(str_val) => str_val,
             Err(err) => return Err(err.to_string()),
