@@ -98,6 +98,8 @@ mod default_size_encoding;
 mod tests {
     use std::time::Duration;
 
+    use uart_port::UartPortConfig;
+
     use super::*;
 
     #[test]
@@ -133,11 +135,11 @@ mod tests {
     }
 
     fn generate_uart(port_name: &str) -> UartPort {
-        UartPort::new(
-            port_name,
-            115200,
-            Duration::from_millis(3000),
-        )
+        UartPort::new(&UartPortConfig {
+            port_name: port_name.to_string(),
+            baud: 115200,
+            timeout: Duration::from_millis(3000),
+        })
         .unwrap()
     }
 }
