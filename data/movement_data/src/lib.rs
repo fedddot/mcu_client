@@ -96,3 +96,31 @@ impl TryFrom<&str> for Axis {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_movement_api_request_serialization() {
+        // GIVEN
+        let test_destination = Vector::new(1.0, 2.0, 3.0);
+        let test_speed = 4.0;
+        let request = MovementApiRequest::LinearMovement {
+            destination: test_destination.clone(),
+            speed: test_speed,
+        };
+
+        // THEN
+        let serialized = serde_json::to_string(&request).unwrap();
+        let deserialized: MovementApiRequest = serde_json::from_str(&serialized).unwrap();
+        println!("serialized data:\n{}", serialized);
+        let MovementApiRequest::LinearMovement { destination, speed } = deserialized else {
+            panic!("Deserialized request is not LinearMovement");
+        };
+        assert_eq!(test_speed, speed);
+        [Axis::X, Axis::Y, Axis::Z]
+            .iter()
+            .for_each(|axis| assert_eq!(test_destination.get(axis), destination.get(axis)));
+    }
+}
