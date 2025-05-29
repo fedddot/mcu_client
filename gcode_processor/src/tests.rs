@@ -12,14 +12,14 @@ fn sanity_linear_movements() {
         move |request| {
             let target_vector = Vector::<f32>::new(1.2, 3.4, 5.6);
             let fast_speed = 7.8;
-            let MovementType::Linear(movement_data) = &request.movement_type else {
+            let MovementApiRequest::LinearMovement { destination, speed } = request else {
                 panic!("non-linear movement request");
             };
-            assert_eq!(fast_speed, movement_data.speed);
+            assert_eq!(fast_speed, *speed);
             [Axis::X, Axis::Y, Axis::Z].iter().for_each(|axis| {
-                assert_eq!(movement_data.destination.get(axis), target_vector.get(axis));
+                assert_eq!(destination.get(axis), target_vector.get(axis));
             });
-            Ok(MovementManagerResponse { code: ResultCode::Ok, message: None })
+            Ok(MovementApiResponse { status: StatusCode::Success, message: None })
         }
     );
     run_sanity_test_case(
@@ -29,14 +29,14 @@ fn sanity_linear_movements() {
         move |request| {
             let target_vector = Vector::<f32>::new(1.2, 3.4, 0.0);
             let expected_speed = 11.12;
-            let MovementType::Linear(movement_data) = &request.movement_type else {
+            let MovementApiRequest::LinearMovement { destination, speed } = request else {
                 panic!("non-linear movement request");
             };
-            assert_eq!(expected_speed, movement_data.speed);
+            assert_eq!(expected_speed, *speed);
             [Axis::X, Axis::Y, Axis::Z].iter().for_each(|axis| {
-                assert_eq!(movement_data.destination.get(axis), target_vector.get(axis));
+                assert_eq!(destination.get(axis), target_vector.get(axis));
             });
-            Ok(MovementManagerResponse { code: ResultCode::Ok, message: None })
+            Ok(MovementApiResponse { status: StatusCode::Success, message: None })
         }
     );
 }
@@ -69,7 +69,7 @@ fn sanity_control() {
 
 fn run_sanity_test_case<T>(gcode_line: &str, fast_speed: f32, default_speed: f32, client_callback: T)
 where
-    T: FnMut(&MovementManagerRequest) -> Result<MovementManagerResponse, String> + Send + 'static,
+    T: FnMut(&MovementApiRequest) -> Result<MovementApiResponse, String> + Send + 'static,
 {
     // WHEN
     let mut mock_service_client = MockServiceClient::default();
@@ -90,7 +90,7 @@ where
 mock! {
     pub ServiceClient {}
 
-    impl ServiceClient<MovementManagerRequest, MovementManagerResponse, String> for ServiceClient {
-        fn run_request(&mut self, request: &MovementManagerRequest) -> Result<MovementManagerResponse, String>;
+    impl ServiceClient<MovementApiRequest, MovementApiResponse, String> for ServiceClient {
+        fn run_request(&mut self, request: &MovementApiRequest) -> Result<MovementApiResponse, String>;
     }
 }
