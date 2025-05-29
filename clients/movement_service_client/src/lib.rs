@@ -1,9 +1,10 @@
 use ipc::{IpcReader, IpcWriter};
 
 pub use client::ServiceClient;
-pub use movement_data::{MovementManagerRequest, MovementManagerResponse};
-pub type RequestSerializer = dyn DataTransformer<MovementManagerRequest, Vec<u8>, String>;
-pub type ResponseParser = dyn DataTransformer<Vec<u8>, MovementManagerResponse, String>;
+pub use movement_data::{MovementApiRequest, MovementApiResponse};
+
+pub type RequestSerializer = dyn DataTransformer<MovementApiRequest, Vec<u8>, String>;
+pub type ResponseParser = dyn DataTransformer<Vec<u8>, MovementApiResponse, String>;
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
@@ -32,8 +33,8 @@ impl MovementServiceClient {
     }
 }
 
-impl ServiceClient<MovementManagerRequest, MovementManagerResponse, String> for MovementServiceClient {
-    fn run_request(&mut self, request: &MovementManagerRequest) -> Result<MovementManagerResponse, String> {
+impl ServiceClient<MovementApiRequest, MovementApiResponse, String> for MovementServiceClient {
+    fn run_request(&mut self, request: &MovementApiRequest) -> Result<MovementApiResponse, String> {
         let serial_request = self.request_serializer.transform(request)?;
         self.raw_data_writer.write_data(&serial_request)?;
         let serial_response = self.raw_data_reader.read_data()?;
@@ -50,33 +51,21 @@ mod default_transformers;
 
 #[cfg(test)]
 mod test {
-    use movement_data::{LinearMovementData, MovementType, ResultCode, Vector};
-    use serde_json::{json, Value};
-
     use super::*;
+    use mockall::mock;
+    use serde_json::json;
+    use movement_data::Vector;
 
     #[test]
     fn client_new_sanity() {
         // GIVEN
-        let test_request = MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(1.0, 2.0, 3.0),
-                    speed: 4.0,
-                }
-            )
-        };
-        let expected_response = ResultCode::Ok;
+        let test_raw_data_reader = MockIpcReader::default();
+        let test_raw_data_writer = MockIpcWriter::default();
 
         // THEN
         let _ = MovementServiceClient::new(
-            Box::new(TestIpcReader {
-                expected_response,
-                expected_message: None,
-            }),
-            Box::new(TestIpcWriter {
-                test_request,
-            }),
+            Box::new(test_raw_data_reader),
+            Box::new(test_raw_data_writer),
             Box::new(JsonRequestSerializer),
             Box::new(JsonResponseParser),
         );
@@ -85,65 +74,58 @@ mod test {
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_request = MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(1.0, 2.0, 3.0),
-                    speed: 4.0,
-                }
-            )
+        let test_config_req = MovementApiRequest::Config {
+            x_step_length: 0.1,
+            y_step_length: 0.2,
+            z_step_length: 0.3
         };
-        let expected_response = ResultCode::Ok;
-        let expected_message = "test message";
-        
+        let test_linear_mvmnt_req = MovementApiRequest::LinearMovement {
+            destination: Vector::new(1.0, 2.0, 3.0),
+            speed: 4.0,
+        };
+        let mut test_raw_data_reader = MockIpcReader::default();
+        test_raw_data_reader
+            .expect_read_data()
+            .returning(move || {
+                let json_response = json!({
+                    "result": "SUCCESS",
+                });
+                let serial_response = serde_json::to_vec(&json_response).unwrap();
+                Ok(serial_response)
+            });
+        let mut test_raw_data_writer = MockIpcWriter::default();
+        test_raw_data_writer
+            .expect_write_data()
+            .returning(|data| {         
+                println!("Writing data: {:?}", std::str::from_utf8(data).unwrap());
+                Ok(())
+            });
         // WHEN
-        let mut instance = MovementServiceClient::new(
-            Box::new(TestIpcReader {
-                expected_response: expected_response.clone(),
-                expected_message: Some(expected_message.to_string()),
-            }),
-            Box::new(TestIpcWriter {
-                test_request: test_request.clone(),
-            }),
+        let mut client = MovementServiceClient::new(
+            Box::new(test_raw_data_reader),
+            Box::new(test_raw_data_writer),
             Box::new(JsonRequestSerializer),
             Box::new(JsonResponseParser),
         );
 
         // THEN
-        let result = instance.run_request(&test_request);
-        assert!(result.is_ok());
+        let response = client.run_request(&test_linear_mvmnt_req);
+        assert!(response.is_ok());
+
+        let response = client.run_request(&test_config_req);
+        assert!(response.is_ok());
     }
 
-    struct TestIpcReader {
-        expected_response: ResultCode,
-        expected_message: Option<String>,
-    }
-
-    impl IpcReader<Vec<u8>, String> for TestIpcReader {
-        fn read_data(&mut self) -> Result<Vec<u8>, String> {
-            let mut json_val = Value::default();
-            match &self.expected_response {
-                ResultCode::Ok => json_val["result"] = json!(0),
-                ResultCode::BadRequest => json_val["result"] = json!(1),
-                ResultCode::Exception => json_val["result"] = json!(2),
-            };
-            if let Some(message) = &self.expected_message {
-                json_val["message"] = json!(message);
-            }
-            let str_data = serde_json::to_string(&json_val).unwrap();
-            Ok(str_data.as_bytes().to_vec())
+    mock! {
+        pub IpcReader {}
+        impl IpcReader<Vec<u8>, String> for IpcReader {
+            fn read_data(&mut self) -> Result<Vec<u8>, String>;
         }
     }
-
-    struct TestIpcWriter {
-        test_request: MovementManagerRequest,
-    }
-
-    impl IpcWriter<Vec<u8>, String> for TestIpcWriter {
-        fn write_data(&mut self, data: &Vec<u8>) -> Result<(), String> {
-            let json_data: Value = serde_json::from_slice(data).unwrap();
-            println!("TestIpcWriter: json data: {:?}, test_request: {:?}", json_data, self.test_request);
-            Ok(())
+    mock! {
+        pub IpcWriter {}
+        impl IpcWriter<Vec<u8>, String> for IpcWriter {
+            fn write_data(&mut self, data: &Vec<u8>) -> Result<(), String>;
         }
     }
 }

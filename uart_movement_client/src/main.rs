@@ -1,9 +1,9 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
-use movement_data::{LinearMovementData, MovementType, Vector};
+use movement_data::Vector;
 use uart_port::UartPort;
 use movement_service_client::{
-    JsonRequestSerializer, JsonResponseParser, MovementManagerRequest, MovementServiceClient, ServiceClient
+    JsonRequestSerializer, JsonResponseParser, MovementApiRequest, MovementServiceClient, ServiceClient
 };
 use uart_sized_package_reader_writer::{
     DefaultSizeDecoder,
@@ -41,22 +41,62 @@ fn main() {
     let dx = 20.0;
     let dy = 30.0;
     let dz = 40.0;
-    let test_requests = [
-        MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(dx, dy, dz),
-                    speed,
-                }
-            ),
+    let step_length = 0.01;
+    let hold_time_us = 1;
+    let directions_mapping = HashMap::from(
+        [
+            ("NEGATIVE".to_string(), "CW".to_string()),
+            ("POSITIVE".to_string(), "CCW".to_string()),
+        ]
+    );
+
+    let x_config = movement_data::AxisConfig {
+        stepper_config: movement_data::PicoStepperConfig {
+            enable_pin: 3,
+            step_pin: 4,
+            dir_pin: 5,
+            hold_time_us,
         },
-        MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(-dx, -dy, dz),
-                    speed,
-                }
-            ),
+        step_length,
+        directions_mapping: directions_mapping.clone(),
+    };
+    let y_config = movement_data::AxisConfig {
+        stepper_config: movement_data::PicoStepperConfig {
+            enable_pin: 6,
+            step_pin: 7,
+            dir_pin: 8,
+            hold_time_us,
+        },
+        step_length,
+        directions_mapping: directions_mapping.clone(),
+    };
+    let z_config = movement_data::AxisConfig {
+        stepper_config: movement_data::PicoStepperConfig {
+            enable_pin: 9,
+            step_pin: 10,
+            dir_pin: 11,
+            hold_time_us,
+        },
+        step_length,
+        directions_mapping: directions_mapping.clone(),
+    };
+
+
+    let test_requests = [
+        MovementApiRequest::Config {
+            axes_configs: HashMap::from([
+                (movement_data::Axis::X, x_config),
+                (movement_data::Axis::Y, y_config),
+                (movement_data::Axis::Z, z_config),
+            ]),
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(dx, dy, dz),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(-dx, -dy, dz),
+            speed,
         },
     ];
     for test_request in test_requests.iter() {

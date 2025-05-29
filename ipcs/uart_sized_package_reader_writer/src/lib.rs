@@ -36,11 +36,12 @@ impl IpcReader<Vec<u8>, String> for UartSizedPackageReader {
         let mut port_handle = self.port.get_mut()?;
         
         let mut header_buff = vec![0; header_size];
-        if port_handle.read_exact(header_buff.as_mut_slice()).is_err() {
-            return Err("failed to read package header".to_string());
+        let read_result = port_handle.read_exact(header_buff.as_mut_slice());
+        if read_result.is_err() {
+            return Err(format!("failed to read package header: {read_result:?}"));
         }
         if self.preamble != header_buff[0..preamble_size] {
-            return Err("invalid preamble received".to_string());
+            return Err(format!("invalid preamble received: {:?}", &header_buff[0..preamble_size]));
         }
         let package_size = self.size_decoder.decode(&header_buff[preamble_size..(preamble_size + encoded_size_length)])?;
         let mut data_buff = vec![0; package_size];

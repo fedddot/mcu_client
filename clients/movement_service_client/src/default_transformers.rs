@@ -1,32 +1,64 @@
 use serde_json::{json, Value};
 
-use crate::DataTransformer;
-use movement_data::{
-    Axis, LinearMovementData, MovementManagerRequest, MovementManagerResponse, MovementType, ResultCode, RotationalMovementData, Vector
-};
+use movement_data::*;
+
+pub use crate::DataTransformer;
 
 pub struct JsonRequestSerializer;
 
 impl JsonRequestSerializer {
-    fn serialize_movement_type(movement_type: &MovementType) -> Value {
-        match movement_type {
-            MovementType::Linear(_) => json!(0),
-            MovementType::Rotational(_) => json!(1),
+    fn serialize_request_type(api_request: &MovementApiRequest) -> Value {
+        match api_request {
+            MovementApiRequest::Config { .. } => json!("CONFIG"),
+            MovementApiRequest::LinearMovement { .. } => json!("LINEAR_MOVEMENT"),
+            MovementApiRequest::RotationalMovement { .. } => json!("ROTATIONAL_MOVEMENT"),
         }
     }
 
-    fn serialize_movement_data(movement_type: &MovementType) -> Value {
-        match movement_type {
-            MovementType::Linear(linear_data) => Self::serialize_linear_data(linear_data),
-            MovementType::Rotational(rot_data) => Self::serialize_rotation_data(rot_data),
+    fn serialize_request_data(api_request: &MovementApiRequest) -> Value {
+        match api_request {
+            MovementApiRequest::Config { .. } => Self::serialize_config_data(api_request),
+            MovementApiRequest::LinearMovement { .. } => Self::serialize_linear_data(api_request),
+            MovementApiRequest::RotationalMovement { .. } => Self::serialize_rotation_data(api_request),
         }
     }
 
-    fn serialize_linear_data(data: &LinearMovementData) -> Value {
+    fn serialize_config_data(data: &MovementApiRequest) -> Value {
+        let MovementApiRequest::Config { axes_configs } = data else {
+            panic!("Expected Config variant");
+        };
+        let axis_to_string = |axis: &Axis| match axis {
+            Axis::X => "x",
+            Axis::Y => "y",
+            Axis::Z => "z",
+        };
+        let mut config_data = serde_json::Value::default();
+        for (axis, config) in axes_configs {
+            let axis_config = json!(
+                {
+                    "step_length": config.step_length,
+                    "directions_mapping": config.directions_mapping,
+                    "stepper_cfg": {
+                        "enable_pin": config.stepper_config.enable_pin,
+                        "step_pin": config.stepper_config.step_pin,
+                        "dir_pin": config.stepper_config.dir_pin,
+                        "hold_time_us": config.stepper_config.hold_time_us,
+                    }
+                }
+            );
+            config_data[axis_to_string(axis)] = axis_config;
+        }
+        config_data
+    }
+
+    fn serialize_linear_data(data: &MovementApiRequest) -> Value {
+        let MovementApiRequest::LinearMovement { destination, speed } = data else {
+            panic!("Expected LinearMovement variant");
+        };
         json!(
             {
-                "destination": Self::serialize_vector(&data.destination),
-                "speed": json!(data.speed),
+                "destination": Self::serialize_vector(destination),
+                "speed": json!(speed),
             }
         )
     }
@@ -41,17 +73,15 @@ impl JsonRequestSerializer {
         )
     }
 
-    fn serialize_rotation_data(_data: &RotationalMovementData) -> Value {
+    fn serialize_rotation_data(_data: &MovementApiRequest) -> Value {
         todo!("serialize_rotation_data is not implemented yet")
     }
 }
 
-impl DataTransformer<MovementManagerRequest, Vec<u8>, String> for JsonRequestSerializer {
-    fn transform(&self, input: &MovementManagerRequest) -> Result<Vec<u8>, String> {
-        let json_val = json!({
-            "type":             Self::serialize_movement_type(&input.movement_type),
-            "movement_data":    Self::serialize_movement_data(&input.movement_type),
-        });
+impl DataTransformer<MovementApiRequest, Vec<u8>, String> for JsonRequestSerializer {
+    fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
+        let mut json_val = Self::serialize_request_data(input);
+        json_val["request_type"] = Self::serialize_request_type(input);
         let json_string = match serde_json::to_string(&json_val) {
             Ok(str_val) => str_val,
             Err(err) => return Err(err.to_string()),
@@ -63,18 +93,17 @@ impl DataTransformer<MovementManagerRequest, Vec<u8>, String> for JsonRequestSer
 pub struct JsonResponseParser;
 
 impl JsonResponseParser {
-    fn parse_result(json_data: &Value) -> Result<ResultCode, String> {
-        let Some(result) = json_data.get("result") else {
-            return Err("missing result field".to_string());
+    fn parse_result(json_data: &Value) -> Result<StatusCode, String> {
+        let Some(status) = json_data.get("status") else {
+            return Err("missing status field".to_string());
         };
-        let Some(result) = result.as_i64() else {
+        let Some(status) = status.as_str() else {
             return Err("result field has wrong format".to_string());
         };
-        match result {
-            0 => Ok(ResultCode::Ok),
-            1 => Ok(ResultCode::BadRequest),
-            2 => Ok(ResultCode::Exception),
-            _ => Err(format!("unsupported result value: {}", result)),
+        match status {
+            "SUCCESS" => Ok(StatusCode::Success),
+            "FAILURE" => Ok(StatusCode::Error),
+            _ => Err(format!("unsupported result value: {}", status)),
         }
     }
 
@@ -90,11 +119,11 @@ impl JsonResponseParser {
     }
 }
 
-impl DataTransformer<Vec<u8>, MovementManagerResponse, String> for JsonResponseParser {
-    fn transform(&self, input: &Vec<u8>) -> Result<MovementManagerResponse, String> {
+impl DataTransformer<Vec<u8>, MovementApiResponse, String> for JsonResponseParser {
+    fn transform(&self, input: &Vec<u8>) -> Result<MovementApiResponse, String> {
         let json_val: Value = serde_json::from_slice(input).map_err(|err| err.to_string())?;
-        Ok(MovementManagerResponse {
-            code: Self::parse_result(&json_val)?,
+        Ok(MovementApiResponse {
+            status: Self::parse_result(&json_val)?,
             message: Self::parse_message(&json_val)?,
         })
     }
@@ -109,17 +138,13 @@ mod test {
     #[test]
     fn json_request_ser_sanity() {
         // GIVEN
-        let test_request = MovementManagerRequest {
-            movement_type: MovementType::Linear(
-                LinearMovementData {
-                    destination: Vector::new(1.0, 2.0, 3.0),
-                    speed: 4.9,
-                },
-            ),
+        let test_request = MovementApiRequest::LinearMovement {
+            destination: Vector::new(1.0, 2.0, 3.0),
+            speed: 4.9,
         };
         let expected_value = json!({
-            "type": JsonRequestSerializer::serialize_movement_type(&test_request.movement_type),
-            "movement_data": JsonRequestSerializer::serialize_movement_data(&test_request.movement_type),
+            "type": JsonRequestSerializer::serialize_request_type(&test_request),
+            "data": JsonRequestSerializer::serialize_request_data(&test_request),
         });
 
         // WHEN
