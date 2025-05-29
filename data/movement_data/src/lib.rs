@@ -38,7 +38,7 @@ pub struct MovementApiResponse {
     pub message: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StatusCode {
     Success,
     Error,
