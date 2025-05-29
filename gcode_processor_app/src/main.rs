@@ -1,6 +1,7 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use gcode_processor::GcodeProcessor;
+use movement_data::{Axis, AxisConfig, PicoStepperConfig};
 use movement_service_client::{JsonRequestSerializer, JsonResponseParser, MovementServiceClient};
 use uart_port::UartPort;
 use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
@@ -33,6 +34,7 @@ fn main() {
         60.0,
         30.0,
         Box::new(movement_service_client),
+        &generate_axes_cfg(),
     );
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -48,4 +50,54 @@ fn main() {
             std::process::exit(1);
         },
     }
+}
+
+fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
+    let step_length = 0.1;
+    let hold_time_us = 10;
+    let directions_mapping = HashMap::from([
+        ("POSITIVE".to_string(), "CCW".to_string()),
+        ("NEGATIVE".to_string(), "CW".to_string()),
+    ]);
+    HashMap::from([
+        (
+            Axis::X,
+            AxisConfig {
+                stepper_config: PicoStepperConfig {
+                    enable_pin: 3,
+                    step_pin: 4,
+                    dir_pin: 5,
+                    hold_time_us,
+                },
+                step_length,
+                directions_mapping: directions_mapping.clone(),
+            }
+        ),
+        (
+            Axis::Y,
+            AxisConfig {
+                stepper_config: PicoStepperConfig {
+                    enable_pin: 6,
+                    step_pin: 7,
+                    dir_pin: 8,
+                    hold_time_us,
+                },
+                step_length,
+                directions_mapping: directions_mapping.clone(),
+            }
+        ),
+        (
+            Axis::Z,
+            AxisConfig {
+                stepper_config: PicoStepperConfig {
+                    enable_pin: 9,
+                    step_pin: 10,
+                    dir_pin: 11,
+                    hold_time_us,
+                },
+                step_length,
+                directions_mapping: directions_mapping.clone(),
+            }
+        ),
+    ])
 }
