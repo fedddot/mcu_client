@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use movement_data::*;
 
@@ -16,65 +16,16 @@ impl JsonRequestSerializer {
     }
 
     fn serialize_request_data(api_request: &MovementApiRequest) -> Value {
-        match api_request {
-            MovementApiRequest::Config { .. } => Self::serialize_config_data(api_request),
-            MovementApiRequest::LinearMovement { .. } => Self::serialize_linear_data(api_request),
-            MovementApiRequest::RotationalMovement { .. } => Self::serialize_rotation_data(api_request),
+        let request_str = serde_json::to_string(api_request).unwrap();
+        let request_data: Map<String, Value> = serde_json::from_str(&request_str).unwrap();
+        let request_data: Vec<Value> = request_data
+            .iter()
+            .map(|(_, v)| v.clone())
+            .collect();
+        if request_data.len() != 1 {
+            panic!("expected request json data to have exactly one item");
         }
-    }
-
-    fn serialize_config_data(data: &MovementApiRequest) -> Value {
-        let MovementApiRequest::Config { axes_configs } = data else {
-            panic!("Expected Config variant");
-        };
-        let axis_to_string = |axis: &Axis| match axis {
-            Axis::X => "x",
-            Axis::Y => "y",
-            Axis::Z => "z",
-        };
-        let mut config_data = serde_json::Value::default();
-        for (axis, config) in axes_configs {
-            let axis_config = json!(
-                {
-                    "step_length": config.step_length,
-                    "directions_mapping": config.directions_mapping,
-                    "stepper_cfg": {
-                        "enable_pin": config.stepper_config.enable_pin,
-                        "step_pin": config.stepper_config.step_pin,
-                        "dir_pin": config.stepper_config.dir_pin,
-                        "hold_time_us": config.stepper_config.hold_time_us,
-                    }
-                }
-            );
-            config_data[axis_to_string(axis)] = axis_config;
-        }
-        config_data
-    }
-
-    fn serialize_linear_data(data: &MovementApiRequest) -> Value {
-        let MovementApiRequest::LinearMovement { destination, speed } = data else {
-            panic!("Expected LinearMovement variant");
-        };
-        json!(
-            {
-                "destination": Self::serialize_vector(destination),
-                "speed": json!(speed),
-            }
-        )
-    }
-
-    fn serialize_vector(vector: &Vector<f32>) -> Value {
-        json!(
-            {
-                "x": json!(vector.get(&Axis::X)),
-                "y": json!(vector.get(&Axis::Y)),
-                "z": json!(vector.get(&Axis::Z)),
-            }
-        )
-    }
-
-    fn serialize_rotation_data(_data: &MovementApiRequest) -> Value {
-        todo!("serialize_rotation_data is not implemented yet")
+        request_data[0].clone()
     }
 }
 
@@ -121,11 +72,8 @@ impl JsonResponseParser {
 
 impl DataTransformer<Vec<u8>, MovementApiResponse, String> for JsonResponseParser {
     fn transform(&self, input: &Vec<u8>) -> Result<MovementApiResponse, String> {
-        let json_val: Value = serde_json::from_slice(input).map_err(|err| err.to_string())?;
-        Ok(MovementApiResponse {
-            status: Self::parse_result(&json_val)?,
-            message: Self::parse_message(&json_val)?,
-        })
+        let parsed_report: MovementApiResponse = serde_json::from_slice(input).map_err(|err| err.to_string())?;
+        Ok(parsed_report)
     }
 }
 
@@ -138,14 +86,12 @@ mod test {
     #[test]
     fn json_request_ser_sanity() {
         // GIVEN
-        let test_request = MovementApiRequest::LinearMovement {
+        let test_request = MovementApiRequest::LinearMovement(LinearMovement {
             destination: Vector::new(1.0, 2.0, 3.0),
             speed: 4.9,
-        };
-        let expected_value = json!({
-            "type": JsonRequestSerializer::serialize_request_type(&test_request),
-            "data": JsonRequestSerializer::serialize_request_data(&test_request),
         });
+        let mut expected_value = JsonRequestSerializer::serialize_request_data(&test_request);
+        expected_value["request_type"] = JsonRequestSerializer::serialize_request_type(&test_request);
 
         // WHEN
         let request_serializer = JsonRequestSerializer;

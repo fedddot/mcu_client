@@ -56,7 +56,7 @@ mod test {
     use super::*;
     use mockall::mock;
     use serde_json::json;
-    use movement_data::{Axis, AxisConfig, PicoStepperConfig, Vector};
+    use movement_data::{AxesConfig, AxisConfig, LinearMovement, PicoStepperConfig, Vector};
 
     #[test]
     fn client_new_sanity() {
@@ -77,10 +77,10 @@ mod test {
     fn client_run_request_sanity() {
         // GIVEN
         let test_config_req = create_cfg_request();
-        let test_linear_mvmnt_req = MovementApiRequest::LinearMovement {
+        let test_linear_mvmnt_req = MovementApiRequest::LinearMovement(LinearMovement {
             destination: Vector::new(1.0, 2.0, 3.0),
             speed: 4.0,
-        };
+        });
         let mut test_raw_data_reader = MockIpcReader::default();
         test_raw_data_reader
             .expect_read_data()
@@ -121,8 +121,8 @@ mod test {
             ("POSITIVE".to_string(), "CCW".to_string()),
             ("NEGATIVE".to_string(), "CW".to_string()),
         ]);
-        let axes_configs = HashMap::from([
-            (Axis::X, AxisConfig {
+        MovementApiRequest::Config(AxesConfig {
+            x_axis_config: AxisConfig {
                 stepper_config: PicoStepperConfig {
                     enable_pin: 1,
                     step_pin: 2,
@@ -131,8 +131,8 @@ mod test {
                 },
                 step_length,
                 directions_mapping: directions_mapping.clone(),
-            }),
-            (Axis::Y, AxisConfig {
+            },
+            y_axis_config: AxisConfig {
                 stepper_config: PicoStepperConfig {
                     enable_pin: 4,
                     step_pin: 5,
@@ -141,19 +141,18 @@ mod test {
                 },
                 step_length,
                 directions_mapping: directions_mapping.clone(),
-            }),
-            (Axis::Z, AxisConfig {
+            },
+            z_axis_config: AxisConfig {
                 stepper_config: PicoStepperConfig {
                     enable_pin: 7,
                     step_pin: 8,
                     dir_pin: 9,
                     hold_time_us,
                 },
-                step_length: 0.3,
+                step_length,
                 directions_mapping: directions_mapping.clone(),
-            }),
-        ]);
-        MovementApiRequest::Config { axes_configs }
+            },
+        })
     }
 
     mock! {

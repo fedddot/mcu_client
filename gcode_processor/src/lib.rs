@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use client::ServiceClient;
 use movement_data::{
-    Axis, AxisConfig, MovementApiRequest, MovementApiResponse, StatusCode, Vector
+    AxesConfig, LinearMovement, MovementApiRequest, MovementApiResponse, StatusCode, Vector
 };
 
 pub type MovementServiceClient = dyn ServiceClient<MovementApiRequest, MovementApiResponse, String>;
@@ -20,7 +18,7 @@ impl GcodeProcessor {
         fast_movement_speed: f32,
         default_movement_speed: f32,
         movement_service_client: Box<MovementServiceClient>,
-        axes_configs: &HashMap<Axis, AxisConfig>,
+        axes_configs: &AxesConfig,
     ) -> Self {
         let mut instance = Self {
             parser: parser::GcodeParser,
@@ -29,7 +27,7 @@ impl GcodeProcessor {
             movement_service_client,
             state: GcodeProcessorState::default(),
         };
-        let config_request = MovementApiRequest::Config { axes_configs: axes_configs.clone() };
+        let config_request = MovementApiRequest::Config(axes_configs.clone());
         let config_response = instance
             .movement_service_client
             .run_request(&config_request)
@@ -87,7 +85,7 @@ impl GcodeProcessor {
     fn apply_movement_to_state(state: &GcodeProcessorState, movement_request: &MovementApiRequest) -> GcodeProcessorState {
         let mut state = state.clone();
         let movement_vector = match movement_request {
-            MovementApiRequest::LinearMovement { destination, speed: _ } => destination,
+            MovementApiRequest::LinearMovement(linear_movement) => &linear_movement.destination,
             _ => panic!("unsupported movement type"),
         };
         state.current_position = vector_operations::add_vectors(&state.current_position, movement_vector);
@@ -107,10 +105,12 @@ impl GcodeProcessor {
                 let Some(target) = &gcode_data.target else {
                     return Err("G00 gcode data must have target vector".to_string());
                 };
-                Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &self.state),
-                    speed: self.fast_movement_speed,
-                })
+                Ok(MovementApiRequest::LinearMovement(
+                    LinearMovement {
+                        destination: Self::apply_state_to_target_vector(target, &self.state),
+                        speed: self.fast_movement_speed,
+                    }
+                ))
             },
             Command::G01 => {
                 let Some(target) = &gcode_data.target else {
@@ -120,10 +120,12 @@ impl GcodeProcessor {
                     Some(speed_data) => speed_data,
                     _ => self.default_movement_speed,
                 };
-                Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &self.state),
-                    speed,
-                })
+                Ok(MovementApiRequest::LinearMovement(
+                    LinearMovement {
+                        destination: Self::apply_state_to_target_vector(target, &self.state),
+                        speed,
+                    }
+                ))
             },
             any_other => Err(format!("unsupported movement command received: {any_other:?}")),
         }
