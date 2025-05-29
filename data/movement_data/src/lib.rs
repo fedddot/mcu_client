@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
+use serde_derive::{Serialize, Deserialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MovementApiRequest {
     Config {
         axes_configs: HashMap<Axis, AxisConfig>,
@@ -18,14 +18,14 @@ pub enum MovementApiRequest {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AxisConfig {
     pub stepper_config: PicoStepperConfig,
     pub step_length: f32,
     pub directions_mapping: HashMap<String, String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PicoStepperConfig {
     pub enable_pin: u32,
     pub step_pin: u32,
@@ -33,7 +33,7 @@ pub struct PicoStepperConfig {
     pub hold_time_us: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MovementApiResponse {
     pub status: StatusCode,
     pub message: Option<String>,
@@ -55,7 +55,7 @@ impl From<&str> for StatusCode {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Vector<T: Clone> {
 	values: HashMap<Axis, T>,
 }
@@ -78,7 +78,7 @@ impl<T: Clone> Vector<T> {
 	}
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Axis {
     X = 0,
     Y = 1,
