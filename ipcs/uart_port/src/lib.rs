@@ -10,14 +10,17 @@ pub struct UartPort {
     port: Arc<Mutex<Box<dyn SerialPort>>>,
 }
 
+#[derive(Clone)]
+pub struct UartPortConfig {
+    pub port_name: String,
+    pub baud: u32,
+    pub timeout: Duration,
+}
+
 impl UartPort {
-    pub fn new(
-        port_name: &str,
-        baud: u32,
-        timeout: Duration,
-    ) -> Result<Self, String> {
-        let port_res = serialport::new(port_name, baud)
-            .timeout(timeout)
+    pub fn new(config: &UartPortConfig) -> Result<Self, String> {
+        let port_res = serialport::new(&config.port_name, config.baud)
+            .timeout(config.timeout)
             .data_bits(DataBits::Eight)
             .stop_bits(StopBits::One)
             .parity(Parity::None)
@@ -27,7 +30,7 @@ impl UartPort {
             Ok(port) => Ok(Self {
                 port: Arc::new(Mutex::new(port)),
             }),
-            Err(err) => Err(format!("failed to open serial port {}: {}", port_name, err)),
+            Err(err) => Err(format!("failed to open serial port {}: {}", config.port_name, err)),
         }
     }
 
