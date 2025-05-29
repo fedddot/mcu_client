@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use serde::ser::SerializeStruct;
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -55,9 +56,39 @@ impl From<&str> for StatusCode {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Vector<T: Clone> {
 	values: HashMap<Axis, T>,
+}
+
+impl serde::Serialize for Vector<f32> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Vector", 3)?;
+        state.serialize_field("x", self.get(&Axis::X))?;
+        state.serialize_field("y", self.get(&Axis::Y))?;
+        state.serialize_field("z", self.get(&Axis::Z))?;
+        state.end()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Vector<f32> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut values = HashMap::new();
+        let map: HashMap<String, f32> = HashMap::deserialize(deserializer)?;
+        for (key, value) in map {
+            match Axis::try_from(key.as_str()) {
+                Ok(axis) => { values.insert(axis, value); },
+                Err(e) => return Err(serde::de::Error::custom(e)),
+            }
+        }
+        Ok(Self { values })
+    }
 }
 
 impl<T: Clone> Vector<T> {
@@ -122,5 +153,21 @@ mod tests {
         [Axis::X, Axis::Y, Axis::Z]
             .iter()
             .for_each(|axis| assert_eq!(test_destination.get(axis), destination.get(axis)));
+    }
+
+    #[test]
+    fn test_movement_api_response_serialization() {
+        // GIVEN
+        let response = MovementApiResponse {
+            status: StatusCode::Success,
+            message: Some("movement completed successfully".to_string()),
+        };
+
+        // THEN
+        let serialized = serde_json::to_string(&response).unwrap();
+        let deserialized: MovementApiResponse = serde_json::from_str(&serialized).unwrap();
+        println!("serialized data:\n{}", serialized);
+        assert_eq!(response.status, deserialized.status);
+        assert_eq!(response.message, deserialized.message);
     }
 }
