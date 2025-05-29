@@ -3,17 +3,19 @@ use std::{collections::HashMap, time::Duration};
 use gcode_processor::GcodeProcessor;
 use movement_data::{Axis, AxisConfig, PicoStepperConfig};
 use movement_service_client::{JsonRequestSerializer, JsonResponseParser, MovementServiceClient};
-use uart_port::UartPort;
+use uart_port::{UartPort, UartPortConfig};
 use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
 
 fn main() {
-    let uart_port_name = "/dev/ttyACM0";
-    let baud_rate = 115200;
-    let response_timeout = Duration::from_secs(10);
+    let uart_port_cfg = UartPortConfig {
+        port_name = "/dev/ttyACM0".into(),
+        baud: 115200,
+        timeout: Duration::from_secs(10),
+    };
     let preamble = b"MSG_PREAMBLE";
     let encoded_length = 4;
 
-    let uart_port = UartPort::new(uart_port_name, baud_rate, response_timeout).unwrap();
+    let uart_port = UartPort::new(&uart_port_cfg).unwrap();
     let uart_reader = UartSizedPackageReader::new(
         &uart_port,
         preamble,
@@ -101,3 +103,5 @@ fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
         ),
     ])
 }
+
+mod config_provider;

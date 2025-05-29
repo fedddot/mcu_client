@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug)]
 pub enum MovementApiRequest {
@@ -38,10 +39,20 @@ pub struct MovementApiResponse {
     pub message: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum StatusCode {
     Success,
     Error,
+}
+
+impl From<&str> for StatusCode {
+    fn from(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "success" => StatusCode::Success,
+            "error" => StatusCode::Error,
+            _ => panic!("Unknown status code: {}", s),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -72,4 +83,16 @@ pub enum Axis {
     X = 0,
     Y = 1,
     Z = 2,
+}
+
+impl TryFrom<&str> for Axis {
+    type Error = String;
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_str() {
+            "x" => Ok(Axis::X),
+            "y" => Ok(Axis::Y),
+            "z" => Ok(Axis::Z),
+            _ => Err(format!("unsupported axis: {}", s)),
+        }
+    }
 }
