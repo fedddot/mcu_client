@@ -1,0 +1,52 @@
+{
+    "uart_port_config": {
+        "port_name": "/dev/ttyACM0",
+        "baud": 115200,
+        "timeout_s": 10
+    },
+    "package_config": {
+        "preamble": "MSG_PREAMBLE",
+        "encoded_size_length": 4
+    },
+    "axes_config": {
+        "x": {
+            "stepper_config": {
+                "enable_pin": 4,
+                "dir_pin": 3,
+                "step_pin": 2,
+                "hold_time_us": 10
+            },
+            "step_length": 0.1,
+            "directions_mapping": {
+                "POSITIVE": "CCW",
+                "NEGATIVE": "CW"
+            }
+        },
+        "y": {
+            "stepper_config": {
+                "enable_pin": 4,
+                "dir_pin": 3,
+                "step_pin": 2,
+                "hold_time_us": 10
+            },
+            "step_length": 0.1,
+            "directions_mapping": {
+                "POSITIVE": "CCW",
+                "NEGATIVE": "CW"
+            }
+        },
+        "z": {
+            "stepper_config": {
+                "enable_pin": 4,
+                "dir_pin": 3,
+                "step_pin": 2,
+                "hold_time_us": 10
+            },
+            "step_length": 0.1,
+            "directions_mapping": {
+                "POSITIVE": "CCW",
+                "NEGATIVE": "CW"
+            }
+        }
+    }
+}
