@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use client::ServiceClient;
 use movement_data::{
-    MovementApiRequest, MovementApiResponse, StatusCode, Vector
+    Axis, AxisConfig, MovementApiRequest, MovementApiResponse, StatusCode, Vector
 };
 
 pub type MovementServiceClient = dyn ServiceClient<MovementApiRequest, MovementApiResponse, String>;
@@ -18,14 +20,24 @@ impl GcodeProcessor {
         fast_movement_speed: f32,
         default_movement_speed: f32,
         movement_service_client: Box<MovementServiceClient>,
+        axes_configs: &HashMap<Axis, AxisConfig>,
     ) -> Self {
-        Self {
+        let mut instance = Self {
             parser: parser::GcodeParser,
             fast_movement_speed,
             default_movement_speed,
             movement_service_client,
             state: GcodeProcessorState::default(),
+        };
+        let config_request = MovementApiRequest::Config { axes_configs: axes_configs.clone() };
+        let config_response = instance
+            .movement_service_client
+            .run_request(&config_request)
+            .expect("failed to run configuring request to the movement service");
+        if config_response.status != StatusCode::Success {
+            panic!("configuration request failed: {:?}", config_response.message);
         }
+        instance
     }
 
     pub fn process(&mut self, gcode_line: &str) -> Result<(), String> {
