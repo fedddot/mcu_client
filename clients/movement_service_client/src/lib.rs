@@ -51,10 +51,12 @@ mod default_transformers;
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use super::*;
     use mockall::mock;
     use serde_json::json;
-    use movement_data::Vector;
+    use movement_data::{Axis, AxisConfig, PicoStepperConfig, Vector};
 
     #[test]
     fn client_new_sanity() {
@@ -74,11 +76,7 @@ mod test {
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_config_req = MovementApiRequest::Config {
-            x_step_length: 0.1,
-            y_step_length: 0.2,
-            z_step_length: 0.3
-        };
+        let test_config_req = create_cfg_request();
         let test_linear_mvmnt_req = MovementApiRequest::LinearMovement {
             destination: Vector::new(1.0, 2.0, 3.0),
             speed: 4.0,
@@ -88,7 +86,7 @@ mod test {
             .expect_read_data()
             .returning(move || {
                 let json_response = json!({
-                    "result": "SUCCESS",
+                    "status": "SUCCESS",
                 });
                 let serial_response = serde_json::to_vec(&json_response).unwrap();
                 Ok(serial_response)
@@ -114,6 +112,48 @@ mod test {
 
         let response = client.run_request(&test_config_req);
         assert!(response.is_ok());
+    }
+
+    fn create_cfg_request() -> MovementApiRequest {
+        let hold_time_us = 1000;
+        let step_length = 0.1;
+        let directions_mapping = HashMap::from([
+            ("POSITIVE".to_string(), "CCW".to_string()),
+            ("NEGATIVE".to_string(), "CW".to_string()),
+        ]);
+        let axes_configs = HashMap::from([
+            (Axis::X, AxisConfig {
+                stepper_config: PicoStepperConfig {
+                    enable_pin: 1,
+                    step_pin: 2,
+                    dir_pin: 3,
+                    hold_time_us,
+                },
+                step_length,
+                directions_mapping: directions_mapping.clone(),
+            }),
+            (Axis::Y, AxisConfig {
+                stepper_config: PicoStepperConfig {
+                    enable_pin: 4,
+                    step_pin: 5,
+                    dir_pin: 6,
+                    hold_time_us,
+                },
+                step_length,
+                directions_mapping: directions_mapping.clone(),
+            }),
+            (Axis::Z, AxisConfig {
+                stepper_config: PicoStepperConfig {
+                    enable_pin: 7,
+                    step_pin: 8,
+                    dir_pin: 9,
+                    hold_time_us,
+                },
+                step_length: 0.3,
+                directions_mapping: directions_mapping.clone(),
+            }),
+        ]);
+        MovementApiRequest::Config { axes_configs }
     }
 
     mock! {
