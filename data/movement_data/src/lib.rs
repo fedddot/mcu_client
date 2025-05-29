@@ -4,19 +4,30 @@ use serde_derive::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MovementApiRequest {
-    Config {
-        axes_configs: HashMap<Axis, AxisConfig>,
-    },
-    LinearMovement {
-        destination: Vector<f32>,
-        speed: f32,
-    },
-    RotationalMovement {
-        destination: Vector<f32>,
-        rotation_center: Vector<f32>,
-        angle: f32,
-        speed: f32,
-    },
+    Config(AxesConfig),
+    LinearMovement(LinearMovement),
+    RotationalMovement(RotationalMovement),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AxesConfig {
+    pub x_axis_config: AxisConfig,
+    pub y_axis_config: AxisConfig,
+    pub z_axis_config: AxisConfig,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LinearMovement {
+    pub destination: Vector<f32>,
+    pub speed: f32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RotationalMovement {
+    destination: Vector<f32>,
+    rotation_center: Vector<f32>,
+    angle: f32,
+    speed: f32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -44,16 +55,6 @@ pub struct MovementApiResponse {
 pub enum StatusCode {
     Success,
     Error,
-}
-
-impl From<&str> for StatusCode {
-    fn from(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "success" => StatusCode::Success,
-            "error" => StatusCode::Error,
-            _ => panic!("Unknown status code: {}", s),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -135,24 +136,35 @@ mod tests {
     #[test]
     fn test_movement_api_request_serialization() {
         // GIVEN
-        let test_destination = Vector::new(1.0, 2.0, 3.0);
-        let test_speed = 4.0;
-        let request = MovementApiRequest::LinearMovement {
-            destination: test_destination.clone(),
-            speed: test_speed,
+        let linear_movement = LinearMovement {
+            destination: Vector::new(1.0, 2.0, 3.0),
+            speed: 4.0,
         };
+        let request = MovementApiRequest::LinearMovement(linear_movement.clone());
 
         // THEN
-        let serialized = serde_json::to_string(&request).unwrap();
-        let deserialized: MovementApiRequest = serde_json::from_str(&serialized).unwrap();
-        println!("serialized data:\n{}", serialized);
-        let MovementApiRequest::LinearMovement { destination, speed } = deserialized else {
-            panic!("Deserialized request is not LinearMovement");
-        };
-        assert_eq!(test_speed, speed);
+        let serialized = serde_json::to_string(&linear_movement).unwrap();
+        println!("serialized linear movement:\n{}", serialized);
+        let deserialized: LinearMovement = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(linear_movement.speed, deserialized.speed);
         [Axis::X, Axis::Y, Axis::Z]
             .iter()
-            .for_each(|axis| assert_eq!(test_destination.get(axis), destination.get(axis)));
+            .for_each(
+                |axis| assert_eq!(
+                    linear_movement.destination.get(axis),
+                    deserialized.destination.get(axis)
+                )
+            );
+
+
+        let serialized = serde_json::to_string(&request).unwrap();
+        println!("serialized data:\n{}", serialized);
+        let deserialized: MovementApiRequest = serde_json::from_str(&serialized).unwrap();
+        let MovementApiRequest::LinearMovement(deserialized_movement) = deserialized else {
+            panic!("Deserialized request is not LinearMovement");
+        };
+        assert_eq!(linear_movement.speed, deserialized_movement.speed);
+        
     }
 
     #[test]
