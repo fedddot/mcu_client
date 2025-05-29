@@ -1,14 +1,9 @@
 use client::ServiceClient;
 use movement_data::{
-    LinearMovementData,
-    MovementManagerRequest,
-    MovementManagerResponse,
-    MovementType,
-    ResultCode,
-    Vector
+    MovementApiRequest, MovementApiResponse, StatusCode, Vector
 };
 
-pub type MovementServiceClient = dyn ServiceClient<MovementManagerRequest, MovementManagerResponse, String>;
+pub type MovementServiceClient = dyn ServiceClient<MovementApiRequest, MovementApiResponse, String>;
 
 pub struct GcodeProcessor {
     parser: parser::GcodeParser,
@@ -48,9 +43,9 @@ impl GcodeProcessor {
     fn process_movement_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
         let movement_request = self.generate_movement_request(gcode_data)?;
         let movement_response = self.movement_service_client.run_request(&movement_request)?;
-        match movement_response.code {
-            ResultCode::Ok => {
-                self.state = Self::apply_movement_to_state(&self.state, &movement_request.movement_type);
+        match movement_response.status {
+            StatusCode::Success => {
+                self.state = Self::apply_movement_to_state(&self.state, &movement_request);
                 Ok(())
             },
             _ => {
@@ -77,53 +72,46 @@ impl GcodeProcessor {
         }
     }
 
-    fn apply_movement_to_state(state: &GcodeProcessorState, movement: &MovementType) -> GcodeProcessorState {
+    fn apply_movement_to_state(state: &GcodeProcessorState, movement_request: &MovementApiRequest) -> GcodeProcessorState {
         let mut state = state.clone();
-        let movement_vector = match movement {
-            MovementType::Linear(data) => &data.destination,
-            MovementType::Rotational(_) => panic!("rotational movement is not implemented yet"),
+        let movement_vector = match movement_request {
+            MovementApiRequest::LinearMovement { destination, speed: _ } => destination,
+            _ => panic!("unsupported movement type"),
         };
         state.current_position = vector_operations::add_vectors(&state.current_position, movement_vector);
         state
     }
 
-    fn apply_state_to_gcode_data(gcode_data: &GcodeData, state: &GcodeProcessorState) -> GcodeData {
-        let mut gcode_data = gcode_data.clone();
+    fn apply_state_to_target_vector(target_vector: &Vector<f32>, state: &GcodeProcessorState) -> Vector<f32> {
         if state.coordinates_type == CoordinatesType::Relative {
-            return gcode_data;
+            return target_vector.clone();
         }
-        if let Some(abs_target) = &gcode_data.target {
-            gcode_data.target = Some(vector_operations::sub_vectors(abs_target, &state.current_position));
-        }
-        gcode_data
+        vector_operations::sub_vectors(target_vector, &state.current_position)
     }
 
-    fn generate_movement_request(&self, gcode_data: &GcodeData) -> Result<MovementManagerRequest, String> {
-        let gcode_data = Self::apply_state_to_gcode_data(gcode_data, &self.state);
+    fn generate_movement_request(&self, gcode_data: &GcodeData) -> Result<MovementApiRequest, String> {
         match &gcode_data.command {
             Command::G00 => {
-                let Some(destination) = &gcode_data.target else {
+                let Some(target) = &gcode_data.target else {
                     return Err("G00 gcode data must have target vector".to_string());
                 };
-                let movement_data = LinearMovementData {
-                    destination: destination.clone(),
+                Ok(MovementApiRequest::LinearMovement {
+                    destination: Self::apply_state_to_target_vector(target, &self.state),
                     speed: self.fast_movement_speed,
-                };
-                Ok(MovementManagerRequest { movement_type: MovementType::Linear(movement_data) })
+                })
             },
             Command::G01 => {
-                let Some(destination) = &gcode_data.target else {
+                let Some(target) = &gcode_data.target else {
                     return Err("G01 gcode data must have target vector".to_string());
                 };
                 let speed = match gcode_data.speed {
                     Some(speed_data) => speed_data,
                     _ => self.default_movement_speed,
                 };
-                let movement_data = LinearMovementData {
-                    destination: destination.clone(),
+                Ok(MovementApiRequest::LinearMovement {
+                    destination: Self::apply_state_to_target_vector(target, &self.state),
                     speed,
-                };
-                Ok(MovementManagerRequest { movement_type: MovementType::Linear(movement_data) })
+                })
             },
             any_other => Err(format!("unsupported movement command received: {any_other:?}")),
         }
