@@ -41,7 +41,7 @@ fn main() {
     let dx = 20.0;
     let dy = 30.0;
     let dz = 40.0;
-    let step_length = 0.01;
+    let step_length = 0.1;
     let hold_time_us = 1;
     let directions_mapping = HashMap::from(
         [
@@ -52,9 +52,9 @@ fn main() {
 
     let x_config = movement_data::AxisConfig {
         stepper_config: movement_data::PicoStepperConfig {
-            enable_pin: 3,
-            step_pin: 4,
-            dir_pin: 5,
+            enable_pin: 17,
+            step_pin: 16,
+            dir_pin: 15,
             hold_time_us,
         },
         step_length,
@@ -62,9 +62,9 @@ fn main() {
     };
     let y_config = movement_data::AxisConfig {
         stepper_config: movement_data::PicoStepperConfig {
-            enable_pin: 6,
-            step_pin: 7,
-            dir_pin: 8,
+            enable_pin: 12,
+            step_pin: 11,
+            dir_pin: 10,
             hold_time_us,
         },
         step_length,
@@ -72,9 +72,9 @@ fn main() {
     };
     let z_config = movement_data::AxisConfig {
         stepper_config: movement_data::PicoStepperConfig {
-            enable_pin: 9,
-            step_pin: 10,
-            dir_pin: 11,
+            enable_pin: 8,
+            step_pin: 7,
+            dir_pin: 6,
             hold_time_us,
         },
         step_length,
