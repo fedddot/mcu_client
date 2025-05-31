@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package movement_vendor_api;
+
+message MovementApiRequest {
+	oneof request {
+		ConfigRequest config_request = 1;
+		LinearMovementRequest linear_movement_request = 2;
+		RotationMovementRequest rotation_movement_request = 3;
+	}
+}
+
+message MovementApiResponse {
+	StatusCode status = 1;
+	string message = 2;
+}
+
+enum StatusCode {
+	SUCCESS = 0;
+	FAILURE = 1;
+}
+
+message ConfigRequest {
+	AxesConfig axes_config = 1;
+}
+
+message LinearMovementRequest {
+	float speed = 1;
+	Vector target = 2;
+}
+
+message RotationMovementRequest {
+	float speed = 1;
+	Vector target = 2;
+	Vector rotation_center = 3;
+	float angle = 4;
+}
+
+message Vector {
+	float x = 1;
+	float y = 2;
+	float z = 3;
+}
+
+message PicoStepperConfig {
+	uint32 enable_pin = 1;
+	uint32 step_pin = 2;
+	uint32 dir_pin = 3;
+	uint32 hold_time_us = 4;
+}
+
+message AxesConfig {
+	AxisConfig x_axis_cfg = 1;
+	AxisConfig y_axis_cfg = 2;
+	AxisConfig z_axis_cfg = 3;
+}
+
+message AxisConfig {
+	PicoStepperConfig stepper_config = 1;
+	float step_length = 2;
+	DirectionsMapping directions_mapping = 3;
+}
+
+message DirectionsMapping {
+	StepperDirection positive = 1;
+	StepperDirection negative = 2;
+}
+
+enum StepperDirection {
+	CW = 0;
+	CCW = 1;
+}

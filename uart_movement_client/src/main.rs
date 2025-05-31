@@ -1,9 +1,9 @@
 use std::{collections::HashMap, time::Duration};
 
-use movement_data::Vector;
+use movement_data::{MovementApiResponse, Vector};
 use uart_port::UartPort;
 use movement_service_client::{
-    JsonRequestSerializer, JsonResponseParser, MovementApiRequest, MovementServiceClient, ServiceClient
+    DataTransformer, MovementApiRequest, MovementServiceClient, ServiceClient
 };
 use uart_sized_package_reader_writer::{
     DefaultSizeDecoder,
@@ -33,16 +33,16 @@ fn main() {
     let mut client = MovementServiceClient::new(
         Box::new(uart_reader),
             Box::new(uart_writer),
-        Box::new(JsonRequestSerializer),
-        Box::new(JsonResponseParser),
+        Box::new(ProtoRequestSerializer),
+        Box::new(ProtoResponseParser),
     );
 
-    let speed = 130.0;
-    let dx = 20.0;
-    let dy = 30.0;
-    let dz = 40.0;
-    let step_length = 0.01;
-    let hold_time_us = 1;
+    let speed = 50.0;
+    let dx = 10.0;
+    let dy = 10.0;
+    let dz = 5.0;
+    let step_length = 0.005;
+    let hold_time_us = 100;
     let directions_mapping = HashMap::from(
         [
             ("NEGATIVE".to_string(), "CW".to_string()),
@@ -52,9 +52,9 @@ fn main() {
 
     let x_config = movement_data::AxisConfig {
         stepper_config: movement_data::PicoStepperConfig {
-            enable_pin: 3,
-            step_pin: 4,
-            dir_pin: 5,
+            enable_pin: 17,
+            step_pin: 16,
+            dir_pin: 15,
             hold_time_us,
         },
         step_length,
@@ -62,9 +62,9 @@ fn main() {
     };
     let y_config = movement_data::AxisConfig {
         stepper_config: movement_data::PicoStepperConfig {
-            enable_pin: 6,
-            step_pin: 7,
-            dir_pin: 8,
+            enable_pin: 12,
+            step_pin: 11,
+            dir_pin: 10,
             hold_time_us,
         },
         step_length,
@@ -72,9 +72,9 @@ fn main() {
     };
     let z_config = movement_data::AxisConfig {
         stepper_config: movement_data::PicoStepperConfig {
-            enable_pin: 9,
-            step_pin: 10,
-            dir_pin: 11,
+            enable_pin: 8,
+            step_pin: 7,
+            dir_pin: 6,
             hold_time_us,
         },
         step_length,
@@ -91,19 +91,48 @@ fn main() {
             ]),
         },
         MovementApiRequest::LinearMovement {
-            destination: Vector::new(dx, dy, dz),
+            destination: Vector::new(dx, 0.0, 0.0),
             speed,
         },
         MovementApiRequest::LinearMovement {
-            destination: Vector::new(-dx, -dy, dz),
+            destination: Vector::new(0.0, dy, 0.0),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(0.0, 0.0, dz),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(-dx, -dy, 0.0),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(0.0, 0.0, -dz),
             speed,
         },
     ];
     for test_request in test_requests.iter() {
         println!("request: {:?}", test_request);
         let response = client.run_request(test_request);
-        let response = response.unwrap();
-        println!("response: {:?}", response);
-        println!(" ");
+        match response {
+            Ok(_) => println!("request processed, response: {:?}", response),
+            Err(e) => println!("error processing request: {e}"),
+        }
+    }
+}
+
+struct ProtoRequestSerializer;
+
+impl DataTransformer<MovementApiRequest, Vec<u8>, String> for ProtoRequestSerializer {
+    fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
+        Ok(proto_transformers::serialize_movement_request(input))
+    }
+}
+
+struct ProtoResponseParser;
+
+impl DataTransformer<Vec<u8>, MovementApiResponse, String> for ProtoResponseParser {
+    fn transform(&self, input: &Vec<u8>) -> Result<MovementApiResponse, String> {
+        proto_transformers::parse_movement_response(input)
     }
 }
