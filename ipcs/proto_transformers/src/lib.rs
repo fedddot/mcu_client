@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use movement_data::{Axis, MovementApiRequest};
+use movement_data::{Axis, MovementApiRequest, MovementApiResponse, StatusCode};
 use prost::Message;
 
 pub fn serialize_movement_request(request: &MovementApiRequest) -> Vec<u8> {
@@ -97,6 +97,21 @@ fn directions_mapping_to_pb(directions_mapping: &HashMap<String, String>,
             .expect("missing NEGATIVE direction")
         ),
     }
+}
+
+pub fn parse_movement_response(data: &[u8]) -> Result<MovementApiResponse, String> {
+    let pb_response = pb::MovementApiResponse::decode(data)
+        .map_err(|e| format!("failed to decode response: {}", e))?;
+    let pb_status = pb::StatusCode::try_from(pb_response.status)
+        .map_err(|e| format!("failed to convert status code: {}", e))?;
+    let status = match pb_status {
+        pb::StatusCode::Success => StatusCode::Success,
+        pb::StatusCode::Failure => StatusCode::Error,
+    };
+    Ok(MovementApiResponse {
+        status,
+        message: pb_response.message.into(),
+    })
 }
 
 mod pb {
