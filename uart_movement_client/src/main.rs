@@ -37,12 +37,12 @@ fn main() {
         Box::new(ProtoResponseParser),
     );
 
-    let speed = 130.0;
-    let dx = 20.0;
-    let dy = 30.0;
-    let dz = 40.0;
-    let step_length = 0.1;
-    let hold_time_us = 1;
+    let speed = 50.0;
+    let dx = 10.0;
+    let dy = 10.0;
+    let dz = 5.0;
+    let step_length = 0.01;
+    let hold_time_us = 100;
     let directions_mapping = HashMap::from(
         [
             ("NEGATIVE".to_string(), "CW".to_string()),
@@ -91,11 +91,19 @@ fn main() {
             ]),
         },
         MovementApiRequest::LinearMovement {
-            destination: Vector::new(dx, dy, dz),
+            destination: Vector::new(dx, 0.0, 0.0),
             speed,
         },
         MovementApiRequest::LinearMovement {
-            destination: Vector::new(-dx, -dy, dz),
+            destination: Vector::new(0.0, dy, 0.0),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(0.0, 0.0, dz),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(-dx, -dy, -dz),
             speed,
         },
     ];
