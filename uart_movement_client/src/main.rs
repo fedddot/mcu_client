@@ -102,9 +102,10 @@ fn main() {
     for test_request in test_requests.iter() {
         println!("request: {:?}", test_request);
         let response = client.run_request(test_request);
-        println!("response: {:?}", response);
-        let response = response.unwrap();
-        println!(" ");
+        match response {
+            Ok(_) => println!("request processed, response: {:?}", response),
+            Err(e) => println!("error processing request: {e}"),
+        }
     }
 }
 
