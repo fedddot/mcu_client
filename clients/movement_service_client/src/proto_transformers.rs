@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use movement_data::{Axis, MovementApiRequest, MovementApiResponse, StatusCode};
 use prost::Message;
 
-pub fn serialize_movement_request(request: &MovementApiRequest) -> Vec<u8> {
+use crate::DataTransformer;
+
+fn serialize_movement_request(request: &MovementApiRequest) -> Vec<u8> {
     match request {
         MovementApiRequest::LinearMovement { destination, speed } => {
             let target = pb::Vector {
@@ -99,7 +101,7 @@ fn directions_mapping_to_pb(directions_mapping: &HashMap<String, String>,
     }
 }
 
-pub fn parse_movement_response(data: &[u8]) -> Result<MovementApiResponse, String> {
+fn parse_movement_response(data: &[u8]) -> Result<MovementApiResponse, String> {
     let pb_response = pb::MovementApiResponse::decode(data)
         .map_err(|e| format!("failed to decode response: {}", e))?;
     let pb_status = pb::StatusCode::try_from(pb_response.status)
@@ -112,6 +114,22 @@ pub fn parse_movement_response(data: &[u8]) -> Result<MovementApiResponse, Strin
         status,
         message: pb_response.message.into(),
     })
+}
+
+pub struct ProtoRequestSerializer;
+
+impl DataTransformer<MovementApiRequest, Vec<u8>, String> for ProtoRequestSerializer {
+    fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
+        Ok(serialize_movement_request(input))
+    }
+}
+
+pub struct ProtoResponseParser;
+
+impl DataTransformer<Vec<u8>, MovementApiResponse, String> for ProtoResponseParser {
+    fn transform(&self, input: &Vec<u8>) -> Result<MovementApiResponse, String> {
+        parse_movement_response(input)
+    }
 }
 
 mod pb {

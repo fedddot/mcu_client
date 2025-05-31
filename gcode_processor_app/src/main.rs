@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use gcode_processor::GcodeProcessor;
 use movement_data::{Axis, AxisConfig, PicoStepperConfig};
-use movement_service_client::{JsonRequestSerializer, JsonResponseParser, MovementServiceClient};
+use movement_service_client::{MovementServiceClient, ProtoRequestSerializer, ProtoResponseParser};
 use uart_port::UartPort;
 use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
 
@@ -27,8 +27,8 @@ fn main() {
     let movement_service_client = MovementServiceClient::new(
         Box::new(uart_reader),
         Box::new(uart_writer),
-        Box::new(JsonRequestSerializer),
-        Box::new(JsonResponseParser),
+        Box::new(ProtoRequestSerializer),
+        Box::new(ProtoResponseParser),
     );
     let mut processor = GcodeProcessor::new(
         60.0,
@@ -53,7 +53,7 @@ fn main() {
 }
 
 fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
-    let step_length = 0.1;
+    let step_length = 0.005;
     let hold_time_us = 10;
     let directions_mapping = HashMap::from([
         ("POSITIVE".to_string(), "CCW".to_string()),
@@ -64,9 +64,9 @@ fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
             Axis::X,
             AxisConfig {
                 stepper_config: PicoStepperConfig {
-                    enable_pin: 3,
-                    step_pin: 4,
-                    dir_pin: 5,
+                    enable_pin: 17,
+                    step_pin: 16,
+                    dir_pin: 15,
                     hold_time_us,
                 },
                 step_length,
@@ -77,9 +77,9 @@ fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
             Axis::Y,
             AxisConfig {
                 stepper_config: PicoStepperConfig {
-                    enable_pin: 6,
-                    step_pin: 7,
-                    dir_pin: 8,
+                    enable_pin: 12,
+                    step_pin: 11,
+                    dir_pin: 10,
                     hold_time_us,
                 },
                 step_length,
@@ -90,9 +90,9 @@ fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
             Axis::Z,
             AxisConfig {
                 stepper_config: PicoStepperConfig {
-                    enable_pin: 9,
-                    step_pin: 10,
-                    dir_pin: 11,
+                    enable_pin: 8,
+                    step_pin: 7,
+                    dir_pin: 6,
                     hold_time_us,
                 },
                 step_length,

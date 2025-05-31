@@ -10,5 +10,5 @@ members = [
     "clients/movement_service_client",
     "uart_movement_client",
     "gcode_processor",
-    "gcode_processor_app", "ipcs/proto_transformers",
+    "gcode_processor_app",
 ]
