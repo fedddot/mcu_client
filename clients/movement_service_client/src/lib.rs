@@ -51,6 +51,8 @@ mod default_transformers;
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use super::*;
     use mockall::mock;
     use serde_json::json;
@@ -75,9 +77,7 @@ mod test {
     fn client_run_request_sanity() {
         // GIVEN
         let test_config_req = MovementApiRequest::Config {
-            x_step_length: 0.1,
-            y_step_length: 0.2,
-            z_step_length: 0.3
+            axes_configs: HashMap::new(),
         };
         let test_linear_mvmnt_req = MovementApiRequest::LinearMovement {
             destination: Vector::new(1.0, 2.0, 3.0),
