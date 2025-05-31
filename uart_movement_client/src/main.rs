@@ -41,7 +41,7 @@ fn main() {
     let dx = 10.0;
     let dy = 10.0;
     let dz = 5.0;
-    let step_length = 0.01;
+    let step_length = 0.005;
     let hold_time_us = 100;
     let directions_mapping = HashMap::from(
         [
