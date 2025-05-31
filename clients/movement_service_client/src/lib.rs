@@ -9,6 +9,7 @@ pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
 pub use json_transformers::{JsonRequestSerializer, JsonResponseParser};
+pub use proto_transformers::{ProtoRequestSerializer, ProtoResponseParser};
 
 pub struct MovementServiceClient {
     raw_data_reader:        Box<RawDataReader>,
@@ -48,6 +49,7 @@ pub trait DataTransformer<Input, Output, Error> {
 }
 
 mod json_transformers;
+mod proto_transformers;
 
 #[cfg(test)]
 mod test {
