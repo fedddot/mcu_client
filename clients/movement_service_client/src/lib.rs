@@ -8,7 +8,7 @@ pub type ResponseParser = dyn DataTransformer<Vec<u8>, MovementApiResponse, Stri
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
-pub use default_transformers::{JsonRequestSerializer, JsonResponseParser};
+pub use json_transformers::{JsonRequestSerializer, JsonResponseParser};
 
 pub struct MovementServiceClient {
     raw_data_reader:        Box<RawDataReader>,
@@ -47,7 +47,7 @@ pub trait DataTransformer<Input, Output, Error> {
     fn transform(&self, input: &Input) -> Result<Output, Error>;
 }
 
-mod default_transformers;
+mod json_transformers;
 
 #[cfg(test)]
 mod test {
