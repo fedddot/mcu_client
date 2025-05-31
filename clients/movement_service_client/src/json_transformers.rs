@@ -142,10 +142,8 @@ mod test {
             destination: Vector::new(1.0, 2.0, 3.0),
             speed: 4.9,
         };
-        let expected_value = json!({
-            "type": JsonRequestSerializer::serialize_request_type(&test_request),
-            "data": JsonRequestSerializer::serialize_request_data(&test_request),
-        });
+        let mut expected_value = JsonRequestSerializer::serialize_request_data(&test_request);
+        expected_value["request_type"] = JsonRequestSerializer::serialize_request_type(&test_request);
 
         // WHEN
         let request_serializer = JsonRequestSerializer;
