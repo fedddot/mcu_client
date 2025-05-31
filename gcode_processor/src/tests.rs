@@ -44,9 +44,28 @@ fn sanity_linear_movements() {
 #[test]
 fn sanity_control() {
     // GIVEN
-    let mock_service_client = MockServiceClient::default();
     let g90_line = "G90";
     let g91_line = "G91";
+    let state = std::sync::Arc::new(std::sync::Mutex::new(GcodeProcessorState::default()));
+    let mut state_storage = MockStateStorage::default();
+    let mut mock_service_client = MockServiceClient::default();
+
+    // WHEN
+    let state_for_reading = state.clone();
+    state_storage
+        .expect_read_state()
+        .returning(move || Ok(state_for_reading.lock().unwrap().clone()));
+    let state_for_writing = state.clone();
+    state_storage
+        .expect_write_state()
+        .returning(move |new_state| {
+            let mut state = state_for_writing.lock().unwrap();
+            *state = new_state.clone();
+            Ok(())
+        });
+    mock_service_client
+        .expect_run_request()
+        .returning(|_| Ok(MovementApiResponse { status: StatusCode::Success, message: None }));
     
     // WHEN
     let mut instance = GcodeProcessor::new(
@@ -54,6 +73,7 @@ fn sanity_control() {
         30.0,
         Box::new(mock_service_client),
         &generate_axes_cfg(),
+        Box::new(state_storage),
     );
 
     // THEN
@@ -72,7 +92,23 @@ fn run_sanity_test_case<T>(gcode_line: &str, fast_speed: f32, default_speed: f32
 where
     T: FnMut(&MovementApiRequest) -> Result<MovementApiResponse, String> + Send + 'static,
 {
+    // GIVEN
+    let state = std::sync::Arc::new(std::sync::Mutex::new(GcodeProcessorState::default()));
+    let mut state_storage = MockStateStorage::default();
+
     // WHEN
+    let state_for_reading = state.clone();
+    state_storage
+        .expect_read_state()
+        .returning(move || Ok(state_for_reading.lock().unwrap().clone()));
+    let state_for_writing = state.clone();
+    state_storage
+        .expect_write_state()
+        .returning(move |new_state| {
+            let mut state = state_for_writing.lock().unwrap();
+            *state = new_state.clone();
+            Ok(())
+        });
     let mut mock_service_client = MockServiceClient::default();
     mock_service_client
         .expect_run_request()
@@ -82,6 +118,7 @@ where
         default_speed,
         Box::new(mock_service_client),
         &generate_axes_cfg(),
+        Box::new(state_storage),
     );
 
     // THEN
@@ -144,5 +181,14 @@ mock! {
 
     impl ServiceClient<MovementApiRequest, MovementApiResponse, String> for ServiceClient {
         fn run_request(&mut self, request: &MovementApiRequest) -> Result<MovementApiResponse, String>;
+    }
+}
+
+mock! {
+    pub StateStorage {}
+
+    impl StateStorage for StateStorage {
+        fn read_state(&self) -> Result<GcodeProcessorState, String>;
+        fn write_state(&mut self, state: &GcodeProcessorState) -> Result<(), String>;
     }
 }

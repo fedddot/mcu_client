@@ -12,7 +12,7 @@ pub struct GcodeProcessor {
     fast_movement_speed: f32,
     default_movement_speed: f32,
     movement_service_client: Box<MovementServiceClient>,
-    state: GcodeProcessorState,
+    state_storage: Box<dyn StateStorage>,
 }
 
 impl GcodeProcessor {
@@ -21,13 +21,14 @@ impl GcodeProcessor {
         default_movement_speed: f32,
         movement_service_client: Box<MovementServiceClient>,
         axes_configs: &HashMap<Axis, AxisConfig>,
+        state_storage: Box<dyn StateStorage>,
     ) -> Self {
         let mut instance = Self {
             parser: parser::GcodeParser,
             fast_movement_speed,
             default_movement_speed,
             movement_service_client,
-            state: GcodeProcessorState::default(),
+            state_storage,
         };
         let config_request = MovementApiRequest::Config { axes_configs: axes_configs.clone() };
         let config_response = instance
@@ -49,7 +50,7 @@ impl GcodeProcessor {
     }
 
     pub fn state(&self) -> GcodeProcessorState {
-        self.state.clone()
+        self.state_storage.read_state().unwrap()
     }
 
     fn process_movement_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
@@ -57,7 +58,9 @@ impl GcodeProcessor {
         let movement_response = self.movement_service_client.run_request(&movement_request)?;
         match movement_response.status {
             StatusCode::Success => {
-                self.state = Self::apply_movement_to_state(&self.state, &movement_request);
+                let state = self.state_storage.read_state()?;
+                let state = Self::apply_movement_to_state(&state, &movement_request);
+                self.state_storage.write_state(&state)?;
                 Ok(())
             },
             _ => {
@@ -73,11 +76,15 @@ impl GcodeProcessor {
     fn process_control_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
         match &gcode_data.command {
             Command::G90 => {
-                self.state.coordinates_type = CoordinatesType::Absolute;
+                let mut state = self.state_storage.read_state()?;
+                state.coordinates_type = CoordinatesType::Absolute;
+                self.state_storage.write_state(&state)?;
                 Ok(())
             },
             Command::G91 => {
-                self.state.coordinates_type = CoordinatesType::Relative;
+                let mut state = self.state_storage.read_state()?;
+                state.coordinates_type = CoordinatesType::Relative;
+                self.state_storage.write_state(&state)?;
                 Ok(())
             },
             any_other => Err(format!("unsupported control command received: {any_other:?}")),
@@ -107,8 +114,9 @@ impl GcodeProcessor {
                 let Some(target) = &gcode_data.target else {
                     return Err("G00 gcode data must have target vector".to_string());
                 };
+                let state = self.state_storage.read_state()?;
                 Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &self.state),
+                    destination: Self::apply_state_to_target_vector(target, &state),
                     speed: self.fast_movement_speed,
                 })
             },
@@ -120,14 +128,20 @@ impl GcodeProcessor {
                     Some(speed_data) => speed_data,
                     _ => self.default_movement_speed,
                 };
+                let state = self.state_storage.read_state()?;
                 Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &self.state),
+                    destination: Self::apply_state_to_target_vector(target, &state),
                     speed,
                 })
             },
             any_other => Err(format!("unsupported movement command received: {any_other:?}")),
         }
     }
+}
+
+pub trait StateStorage {
+    fn read_state(&self) -> Result<GcodeProcessorState, String>;
+    fn write_state(&mut self, state: &GcodeProcessorState) -> Result<(), String>;
 }
 
 #[derive(Clone)]
