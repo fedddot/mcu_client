@@ -1,9 +1,9 @@
 use std::{collections::HashMap, time::Duration};
 
-use movement_data::Vector;
+use movement_data::{MovementApiResponse, Vector};
 use uart_port::UartPort;
 use movement_service_client::{
-    JsonRequestSerializer, JsonResponseParser, MovementApiRequest, MovementServiceClient, ServiceClient
+    DataTransformer, MovementApiRequest, MovementServiceClient, ServiceClient
 };
 use uart_sized_package_reader_writer::{
     DefaultSizeDecoder,
@@ -33,8 +33,8 @@ fn main() {
     let mut client = MovementServiceClient::new(
         Box::new(uart_reader),
             Box::new(uart_writer),
-        Box::new(JsonRequestSerializer),
-        Box::new(JsonResponseParser),
+        Box::new(ProtoRequestSerializer),
+        Box::new(ProtoResponseParser),
     );
 
     let speed = 130.0;
@@ -102,8 +102,24 @@ fn main() {
     for test_request in test_requests.iter() {
         println!("request: {:?}", test_request);
         let response = client.run_request(test_request);
-        let response = response.unwrap();
         println!("response: {:?}", response);
+        let response = response.unwrap();
         println!(" ");
+    }
+}
+
+struct ProtoRequestSerializer;
+
+impl DataTransformer<MovementApiRequest, Vec<u8>, String> for ProtoRequestSerializer {
+    fn transform(&self, input: &MovementApiRequest) -> Result<Vec<u8>, String> {
+        Ok(proto_transformers::serialize_movement_request(input))
+    }
+}
+
+struct ProtoResponseParser;
+
+impl DataTransformer<Vec<u8>, MovementApiResponse, String> for ProtoResponseParser {
+    fn transform(&self, input: &Vec<u8>) -> Result<MovementApiResponse, String> {
+        proto_transformers::parse_movement_response(input)
     }
 }
