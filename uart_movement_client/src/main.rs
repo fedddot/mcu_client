@@ -103,7 +103,11 @@ fn main() {
             speed,
         },
         MovementApiRequest::LinearMovement {
-            destination: Vector::new(-dx, -dy, -dz),
+            destination: Vector::new(-dx, -dy, 0.0),
+            speed,
+        },
+        MovementApiRequest::LinearMovement {
+            destination: Vector::new(0.0, 0.0, -dz),
             speed,
         },
     ];
