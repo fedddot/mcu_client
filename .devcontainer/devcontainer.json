@@ -41,7 +41,6 @@
                 "rust-analyzer.check.command": "clippy",
                 "remote.autoForwardPorts": false
             }
-
 		}
 	},
 	"workspaceMount": "source=${localWorkspaceFolder},target=/usr/app/src,type=bind",
