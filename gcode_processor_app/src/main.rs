@@ -1,5 +1,6 @@
+use std::fs::File;
 use std::{collections::HashMap};
-use std::io::Read;
+use std::io::{BufRead, BufReader, Read};
 use std::time::Duration;
 
 use gcode_processor::{CoordinatesType, GcodeProcessor, GcodeProcessorState, StateStorage};
@@ -10,14 +11,31 @@ use uart_port::UartPort;
 use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
 
 use crate::configurer::JsonFileConfigurer;
+use clap::{Arg, Command};
 
 fn main() {
-    let config_path = "/usr/app/src/gcode_processor_app/resources/config.json";
+    let matches = Command::new("gcode_processor_app")
+        .about("Processes G-code lines")
+        .arg(Arg::new("config_path")
+            .short('c')
+            .long("config")
+            .help("Path to the config JSON file")
+            .required(true)
+        )
+        .arg(Arg::new("gcode_file")
+            .help("Path to the G-code file to process")
+            .required(true)
+            .index(1),
+        )
+        .get_matches();
+
+    let config_path = matches.get_one::<String>("gcode_file").expect("required argument");
+    let gcode_file = matches.get_one::<String>("gcode_file").expect("required argument");
     let configurer = JsonFileConfigurer::new(config_path);
     let config = configurer
         .config()
         .unwrap_or_else(|err| {
-            println!("an error occured on reading config at {config_path}: {err}");
+            eprintln!("an error occured on reading config at {config_path}: {err}");
             std::process::exit(-1);
         });
 
@@ -25,7 +43,10 @@ fn main() {
         &config.uart_port.port_name,
         config.uart_port.baud,
         Duration::from_secs(config.uart_port.response_timeout_s as u64)
-    ).unwrap();
+    ).unwrap_or_else(|err| {
+        eprintln!("an error occured on creating UART port: {err}");
+        std::process::exit(-1);
+    });
     let uart_reader = UartSizedPackageReader::new(
         &uart_port,
         config.uart_package.preamble.as_bytes(),
@@ -50,20 +71,19 @@ fn main() {
         &generate_axes_cfg(),
         Box::new(state_storage),
     );
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
-        eprintln!("usage: {} <gcode line>", args[0]);
-        std::process::exit(1);
+
+    let gcode_lines = read_gcode_lines(gcode_file).unwrap();
+    for gcode_line in &gcode_lines {
+        let result = processor.process(gcode_line);
+        match result {
+            Ok(_) => (),
+            Err(msg) => {
+                eprintln!("gcode processor failed to process the command: {gcode_line}, what: {msg}");
+                std::process::exit(-1);
+            },
+        }
     }
-    let gcode_line = &args[1];
-    let result = processor.process(gcode_line);
-    match result {
-        Ok(_) => (),
-        Err(msg) => {
-            eprintln!("gcode processor failed to process the command: {gcode_line}, what: {msg}");
-            std::process::exit(1);
-        },
-    }
+    std::process::exit(0);
 }
 
 fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
@@ -114,6 +134,28 @@ fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
             }
         ),
     ])
+}
+
+fn read_gcode_lines(gcode_file_path: &str) -> Result<Vec<String>, String> {
+    
+    let file = File::open(gcode_file_path)
+        .map_err(|e| format!("failed to open G-code file: {}", e))?;
+    let reader = BufReader::new(file);
+
+    let lines = reader
+        .lines()
+        .filter_map(|line_result| {
+            let Ok(line) = line_result else {
+                return None;
+            };
+            let re = regex::Regex::new(r"(?i)\bg\d{1,3}\b").unwrap();
+            match re.is_match(&line) {
+                true => Some(line),
+                false => None,
+            }
+        })
+        .collect();
+    Ok(lines)
 }
 
 struct JsonStateStorage {
