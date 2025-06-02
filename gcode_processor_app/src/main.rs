@@ -29,7 +29,7 @@ fn main() {
         )
         .get_matches();
 
-    let config_path = matches.get_one::<String>("gcode_file").expect("required argument");
+    let config_path = matches.get_one::<String>("config_path").expect("required argument");
     let gcode_file = matches.get_one::<String>("gcode_file").expect("required argument");
     let configurer = JsonFileConfigurer::new(config_path);
     let config = configurer
