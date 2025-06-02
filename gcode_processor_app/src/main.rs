@@ -74,6 +74,7 @@ fn main() {
 
     let gcode_lines = read_gcode_lines(gcode_file).unwrap();
     for gcode_line in &gcode_lines {
+        println!("{gcode_line}");
         let result = processor.process(gcode_line);
         match result {
             Ok(_) => (),
@@ -151,7 +152,7 @@ fn read_gcode_lines(gcode_file_path: &str) -> Result<Vec<String>, String> {
             let Ok(line) = line_result else {
                 return None;
             };
-            let re = regex::Regex::new(r"(?i)\bg\d{1,3}\b").unwrap();
+            let re = regex::Regex::new(r"^(?i)g\d{1,3}\b").unwrap();
             match re.is_match(&line) {
                 true => Some(line),
                 false => None,
