@@ -65,8 +65,8 @@ fn main() {
     );
     let state_storage = JsonStateStorage::new(&config.state_storage.file_path);
     let mut processor = GcodeProcessor::new(
-        60.0,
-        30.0,
+        6.0,
+        3.0,
         Box::new(movement_service_client),
         &generate_axes_cfg(),
         Box::new(state_storage),
