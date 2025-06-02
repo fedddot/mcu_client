@@ -2,7 +2,7 @@
     "uart_port": {
         "port_name": "/dev/ttyACM0",
         "baud": 115200,
-        "response_timeout_s": 10
+        "response_timeout_s": 30
     },
     "uart_package": {
         "preamble": "MSG_PREAMBLE",
