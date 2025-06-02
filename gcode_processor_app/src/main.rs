@@ -14,7 +14,12 @@ use crate::configurer::JsonFileConfigurer;
 fn main() {
     let config_path = "/usr/app/src/gcode_processor_app/resources/config.json";
     let configurer = JsonFileConfigurer::new(config_path);
-    let config = configurer.config().unwrap();
+    let config = configurer
+        .config()
+        .unwrap_or_else(|err| {
+            println!("an error occured on reading config at {config_path}: {err}");
+            std::process::exit(-1);
+        });
 
     let uart_port = UartPort::new(
         &config.uart_port.port_name,
