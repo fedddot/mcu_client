@@ -2,6 +2,7 @@
 .vscode
 target
 !.devcontainer
+!.vscode
 !.gitignore
 !.github
 !*.dockerfile
