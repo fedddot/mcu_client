@@ -16,6 +16,8 @@ fn main() {
     let preamble = b"MSG_PREAMBLE";
     let encoded_length = 4;
 
+
+
     let uart_port = UartPort::new(uart_port_name, baud_rate, response_timeout).unwrap();
     let uart_reader = UartSizedPackageReader::new(
         &uart_port,
@@ -197,3 +199,5 @@ impl StateStorage for JsonStateStorage {
         Self::write_state(&self.file_path, state)
     }
 }
+
+mod config;
