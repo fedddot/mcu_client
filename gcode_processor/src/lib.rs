@@ -104,17 +104,24 @@ impl GcodeProcessor {
     fn apply_state_to_target_vector(target_vector: &[VectorCoordinateToken], state: &GcodeProcessorState) -> Vector<f32> {
         let mut target = Vector::default();
         for axis in [Axis::X, Axis::Y, Axis::Z] {
-            let token_projection = target_vector
+            let token_projection_opt = target_vector
                 .iter()
                 .find(|(token_axis, _)| *token_axis == axis)
-                .map(|(_, projection)| *projection)
-                .unwrap_or(0.0);
+                .map(|(_, projection)| *projection);
             match state.coordinates_type {
-                CoordinatesType::Absolute => target.set(&axis, token_projection - state.current_position.get(&axis)),
-                CoordinatesType::Relative => target.set(&axis, token_projection),
+                CoordinatesType::Absolute => {
+                    let token_projection = token_projection_opt
+                        .unwrap_or(*state.current_position.get(&axis));
+                    target.set(&axis, token_projection - state.current_position.get(&axis));
+                },
+                CoordinatesType::Relative => {
+                    let token_projection = token_projection_opt
+                        .unwrap_or(0.0);
+                    target.set(&axis, token_projection);
+                },
             }
         }
-        todo!()
+        target
     }
 
     fn generate_movement_request(&self, gcode_data: &GcodeData) -> Result<MovementApiRequest, String> {
