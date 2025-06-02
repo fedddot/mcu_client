@@ -9,25 +9,27 @@ use serde_json::{json, Value};
 use uart_port::UartPort;
 use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
 
+use crate::configurer::JsonFileConfigurer;
+
 fn main() {
-    let uart_port_name = "/dev/ttyACM0";
-    let baud_rate = 115200;
-    let response_timeout = Duration::from_secs(10);
-    let preamble = b"MSG_PREAMBLE";
-    let encoded_length = 4;
+    let config_path = "/usr/app/src/gcode_processor_app/resources/config.json";
+    let configurer = JsonFileConfigurer::new(config_path);
+    let config = configurer.config().unwrap();
 
-
-
-    let uart_port = UartPort::new(uart_port_name, baud_rate, response_timeout).unwrap();
+    let uart_port = UartPort::new(
+        &config.uart_port.port_name,
+        config.uart_port.baud,
+        Duration::from_secs(config.uart_port.response_timeout_s as u64)
+    ).unwrap();
     let uart_reader = UartSizedPackageReader::new(
         &uart_port,
-        preamble,
-        Box::new(DefaultSizeDecoder::new(encoded_length)),
+        config.uart_package.preamble.as_bytes(),
+        Box::new(DefaultSizeDecoder::new(config.uart_package.size_field_length as usize)),
     );
     let uart_writer = UartSizedPackageWriter::new(
         &uart_port,
-        preamble,
-        Box::new(DefaultSizeEncoder::new(encoded_length)),
+        config.uart_package.preamble.as_bytes(),
+        Box::new(DefaultSizeEncoder::new(config.uart_package.size_field_length as usize)),
     );
     let movement_service_client = MovementServiceClient::new(
         Box::new(uart_reader),
@@ -35,7 +37,7 @@ fn main() {
         Box::new(ProtoRequestSerializer),
         Box::new(ProtoResponseParser),
     );
-    let state_storage = JsonStateStorage::new("/usr/app/src/target/state.json");
+    let state_storage = JsonStateStorage::new(&config.state_storage.file_path);
     let mut processor = GcodeProcessor::new(
         60.0,
         30.0,
@@ -201,3 +203,4 @@ impl StateStorage for JsonStateStorage {
 }
 
 mod config;
+mod configurer;
