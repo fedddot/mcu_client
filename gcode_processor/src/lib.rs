@@ -101,36 +101,39 @@ impl GcodeProcessor {
         state
     }
 
-    fn apply_state_to_target_vector(target_vector: &Vector<f32>, state: &GcodeProcessorState) -> Vector<f32> {
-        if state.coordinates_type == CoordinatesType::Relative {
-            return target_vector.clone();
+    fn apply_state_to_target_vector(target_vector: &[VectorCoordinateToken], state: &GcodeProcessorState) -> Vector<f32> {
+        let mut target = Vector::default();
+        for axis in [Axis::X, Axis::Y, Axis::Z] {
+            let token_projection = target_vector
+                .iter()
+                .find(|(token_axis, _)| *token_axis == axis)
+                .map(|(_, projection)| *projection)
+                .unwrap_or(0.0);
+            match state.coordinates_type {
+                CoordinatesType::Absolute => target.set(&axis, token_projection - state.current_position.get(&axis)),
+                CoordinatesType::Relative => target.set(&axis, token_projection),
+            }
         }
-        vector_operations::sub_vectors(target_vector, &state.current_position)
+        todo!()
     }
 
     fn generate_movement_request(&self, gcode_data: &GcodeData) -> Result<MovementApiRequest, String> {
         match &gcode_data.command {
             Command::G00 => {
-                let Some(target) = &gcode_data.target else {
-                    return Err("G00 gcode data must have target vector".to_string());
-                };
                 let state = self.state_storage.read_state()?;
                 Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &state),
+                    destination: Self::apply_state_to_target_vector(&gcode_data.target_tokens, &state),
                     speed: self.fast_movement_speed,
                 })
             },
             Command::G01 => {
-                let Some(target) = &gcode_data.target else {
-                    return Err("G01 gcode data must have target vector".to_string());
-                };
                 let speed = match gcode_data.speed {
                     Some(speed_data) => speed_data,
                     _ => self.default_movement_speed,
                 };
                 let state = self.state_storage.read_state()?;
                 Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &state),
+                    destination: Self::apply_state_to_target_vector(&gcode_data.target_tokens, &state),
                     speed,
                 })
             },
@@ -177,10 +180,12 @@ enum Command {
 #[derive(Clone, Debug)]
 struct GcodeData {
     pub command: Command,
-    pub target: Option<Vector<f32>>,
-    pub _rotation_center: Option<Vector<f32>>,
+    pub target_tokens: Vec<VectorCoordinateToken>,
+    pub _rotation_center_tokens: Vec<VectorCoordinateToken>,
     pub speed: Option<f32>,
 }
+
+type VectorCoordinateToken = (Axis, f32);
 
 mod parser;
 mod vector_operations;

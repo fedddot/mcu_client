@@ -8,7 +8,7 @@ pub fn add_vectors(left: &Vector<f32>, right: &Vector<f32>) -> Vector<f32> {
     result
 }
 
-pub fn sub_vectors(left: &Vector<f32>, right: &Vector<f32>) -> Vector<f32> {
+pub fn _sub_vectors(left: &Vector<f32>, right: &Vector<f32>) -> Vector<f32> {
     let mut result = Vector::new(0.0, 0.0, 0.0);
     [Axis::X, Axis::Y, Axis::Z]
         .iter()

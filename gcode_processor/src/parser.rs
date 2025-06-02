@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use movement_data::{Axis, Vector};
+use movement_data::Axis;
 
-use crate::{Command, GcodeData};
+use crate::{Command, GcodeData, VectorCoordinateToken};
 
 #[derive(Default)]
 pub struct GcodeParser;
@@ -13,7 +13,7 @@ impl GcodeParser {
         let target = Self::parse_target(gcode_line)?;
         let _rotation_center = Self::parse_rotation_center(gcode_line)?;
         let speed = Self::parse_speed(gcode_line)?;
-        Ok(GcodeData { command, target, _rotation_center, speed })
+        Ok(GcodeData { command, target_tokens: target, _rotation_center_tokens: _rotation_center, speed })
     }
 
     fn parse_cmd(gcode_line: &str) -> Result<Command, String> {
@@ -29,27 +29,22 @@ impl GcodeParser {
         }
     }
 
-    fn parse_vector(gcode_line: &str, axes_mapping: &HashMap<Axis, char>) -> Result<Option<Vector<f32>>, String> {
-        let mut vector = Vector::new(0.0, 0.0, 0.0);
-        let mut found_any = false;
+    fn parse_vector(gcode_line: &str, axes_mapping: &HashMap<Axis, char>) -> Result<Vec<VectorCoordinateToken>, String> {
+        let mut vector = vec![];
         for (axis, tag) in axes_mapping.iter() {
             for token in gcode_line.split_whitespace() {
                 if let Some(value) = token.strip_prefix(*tag) {
                     let Ok(value) = value.parse::<f32>() else {
                         return Err(format!("invalid {tag} value: {value}"));
                     };
-                    vector.set(axis, value);
-                    found_any = true;
+                    vector.push((axis.clone(), value));
                 }
             }
         }
-        match found_any {
-            true => Ok(Some(vector)),
-            false => Ok(None),
-        }
+        Ok(vector)
     }
 
-    fn parse_target(gcode_line: &str) -> Result<Option<Vector<f32>>, String> {
+    fn parse_target(gcode_line: &str) -> Result<Vec<VectorCoordinateToken>, String> {
         Self::parse_vector(
             gcode_line,
             &HashMap::from([
@@ -60,7 +55,7 @@ impl GcodeParser {
         )
     }
 
-    fn parse_rotation_center(gcode_line: &str) -> Result<Option<Vector<f32>>, String> {
+    fn parse_rotation_center(gcode_line: &str) -> Result<Vec<VectorCoordinateToken>, String> {
         Self::parse_vector(
             gcode_line,
             &HashMap::from([
@@ -87,6 +82,8 @@ impl GcodeParser {
 
 #[cfg(test)]
 mod tests {
+    use movement_data::Vector;
+
     use super::*;
 
     #[test]
