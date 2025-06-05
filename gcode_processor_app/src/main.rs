@@ -105,7 +105,10 @@ fn generate_axes_cfg() -> HashMap<Axis, AxisConfig> {
                     hold_time_us,
                 },
                 step_length,
-                directions_mapping: directions_mapping.clone(),
+                directions_mapping: HashMap::from([
+                    ("POSITIVE".to_string(), "CW".to_string()),
+                    ("NEGATIVE".to_string(), "CCW".to_string()),
+                ]),
             }
         ),
         (
