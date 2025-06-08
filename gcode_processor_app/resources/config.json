@@ -1,0 +1,19 @@
+{
+    "uart_port": {
+        "port_name": "/dev/ttyACM0",
+        "baud": 115200,
+        "response_timeout_s": 30
+    },
+    "uart_package": {
+        "preamble": "MSG_PREAMBLE",
+        "size_field_length": 4
+    },
+    "state_storage": {
+        "file_path": "/usr/app/src/target/state.json"
+    },
+    "axes_config": {
+        "x_axis": {
+            
+        }
+    }
+}

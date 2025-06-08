@@ -2,6 +2,7 @@
 .vscode
 target
 !.devcontainer
+!.vscode
 !.gitignore
 !.github
 !*.dockerfile
@@ -11,3 +12,4 @@ target
 !*.yml
 !*.py
 !*.proto
+!*.gcode

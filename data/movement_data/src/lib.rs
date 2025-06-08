@@ -67,6 +67,12 @@ impl<T: Clone> Vector<T> {
 	}
 }
 
+impl Default for Vector<f32> {
+    fn default() -> Self {
+        Self::new(0.0, 0.0, 0.0)
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Axis {
     X = 0,

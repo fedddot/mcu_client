@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug gcode_processor_app with default args",
+            "program": "${workspaceFolder}/target/debug/gcode_processor_app",
+            "args": [
+                "--config", "${workspaceFolder}/gcode_processor_app/resources/config.json",
+                "${workspaceFolder}/gcode_processor_app/resources/test.gcode"
+            ],
+            "cwd": "${workspaceFolder}",
+            "sourceLanguages": ["rust"]
+        }
+    ]
+}

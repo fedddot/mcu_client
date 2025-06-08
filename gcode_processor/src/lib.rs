@@ -12,7 +12,7 @@ pub struct GcodeProcessor {
     fast_movement_speed: f32,
     default_movement_speed: f32,
     movement_service_client: Box<MovementServiceClient>,
-    state: GcodeProcessorState,
+    state_storage: Box<dyn StateStorage>,
 }
 
 impl GcodeProcessor {
@@ -21,13 +21,14 @@ impl GcodeProcessor {
         default_movement_speed: f32,
         movement_service_client: Box<MovementServiceClient>,
         axes_configs: &HashMap<Axis, AxisConfig>,
+        state_storage: Box<dyn StateStorage>,
     ) -> Self {
         let mut instance = Self {
             parser: parser::GcodeParser,
             fast_movement_speed,
             default_movement_speed,
             movement_service_client,
-            state: GcodeProcessorState::default(),
+            state_storage,
         };
         let config_request = MovementApiRequest::Config { axes_configs: axes_configs.clone() };
         let config_response = instance
@@ -49,7 +50,7 @@ impl GcodeProcessor {
     }
 
     pub fn state(&self) -> GcodeProcessorState {
-        self.state.clone()
+        self.state_storage.read_state().unwrap()
     }
 
     fn process_movement_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
@@ -57,7 +58,9 @@ impl GcodeProcessor {
         let movement_response = self.movement_service_client.run_request(&movement_request)?;
         match movement_response.status {
             StatusCode::Success => {
-                self.state = Self::apply_movement_to_state(&self.state, &movement_request);
+                let state = self.state_storage.read_state()?;
+                let state = Self::apply_movement_to_state(&state, &movement_request);
+                self.state_storage.write_state(&state)?;
                 Ok(())
             },
             _ => {
@@ -73,11 +76,15 @@ impl GcodeProcessor {
     fn process_control_command(&mut self, gcode_data: &GcodeData) -> Result<(), String> {
         match &gcode_data.command {
             Command::G90 => {
-                self.state.coordinates_type = CoordinatesType::Absolute;
+                let mut state = self.state_storage.read_state()?;
+                state.coordinates_type = CoordinatesType::Absolute;
+                self.state_storage.write_state(&state)?;
                 Ok(())
             },
             Command::G91 => {
-                self.state.coordinates_type = CoordinatesType::Relative;
+                let mut state = self.state_storage.read_state()?;
+                state.coordinates_type = CoordinatesType::Relative;
+                self.state_storage.write_state(&state)?;
                 Ok(())
             },
             any_other => Err(format!("unsupported control command received: {any_other:?}")),
@@ -94,40 +101,57 @@ impl GcodeProcessor {
         state
     }
 
-    fn apply_state_to_target_vector(target_vector: &Vector<f32>, state: &GcodeProcessorState) -> Vector<f32> {
-        if state.coordinates_type == CoordinatesType::Relative {
-            return target_vector.clone();
+    fn apply_state_to_target_vector(target_vector: &[VectorCoordinateToken], state: &GcodeProcessorState) -> Vector<f32> {
+        let mut target = Vector::default();
+        for axis in [Axis::X, Axis::Y, Axis::Z] {
+            let token_projection_opt = target_vector
+                .iter()
+                .find(|(token_axis, _)| *token_axis == axis)
+                .map(|(_, projection)| *projection);
+            match state.coordinates_type {
+                CoordinatesType::Absolute => {
+                    let token_projection = token_projection_opt
+                        .unwrap_or(*state.current_position.get(&axis));
+                    target.set(&axis, token_projection - state.current_position.get(&axis));
+                },
+                CoordinatesType::Relative => {
+                    let token_projection = token_projection_opt
+                        .unwrap_or(0.0);
+                    target.set(&axis, token_projection);
+                },
+            }
         }
-        vector_operations::sub_vectors(target_vector, &state.current_position)
+        target
     }
 
     fn generate_movement_request(&self, gcode_data: &GcodeData) -> Result<MovementApiRequest, String> {
         match &gcode_data.command {
             Command::G00 => {
-                let Some(target) = &gcode_data.target else {
-                    return Err("G00 gcode data must have target vector".to_string());
-                };
+                let state = self.state_storage.read_state()?;
                 Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &self.state),
+                    destination: Self::apply_state_to_target_vector(&gcode_data.target_tokens, &state),
                     speed: self.fast_movement_speed,
                 })
             },
             Command::G01 => {
-                let Some(target) = &gcode_data.target else {
-                    return Err("G01 gcode data must have target vector".to_string());
-                };
                 let speed = match gcode_data.speed {
                     Some(speed_data) => speed_data,
                     _ => self.default_movement_speed,
                 };
+                let state = self.state_storage.read_state()?;
                 Ok(MovementApiRequest::LinearMovement {
-                    destination: Self::apply_state_to_target_vector(target, &self.state),
+                    destination: Self::apply_state_to_target_vector(&gcode_data.target_tokens, &state),
                     speed,
                 })
             },
             any_other => Err(format!("unsupported movement command received: {any_other:?}")),
         }
     }
+}
+
+pub trait StateStorage {
+    fn read_state(&self) -> Result<GcodeProcessorState, String>;
+    fn write_state(&mut self, state: &GcodeProcessorState) -> Result<(), String>;
 }
 
 #[derive(Clone)]
@@ -163,10 +187,12 @@ enum Command {
 #[derive(Clone, Debug)]
 struct GcodeData {
     pub command: Command,
-    pub target: Option<Vector<f32>>,
-    pub _rotation_center: Option<Vector<f32>>,
+    pub target_tokens: Vec<VectorCoordinateToken>,
+    pub _rotation_center_tokens: Vec<VectorCoordinateToken>,
     pub speed: Option<f32>,
 }
+
+type VectorCoordinateToken = (Axis, f32);
 
 mod parser;
 mod vector_operations;
