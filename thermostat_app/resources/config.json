@@ -1,0 +1,11 @@
+{
+    "uart_port": {
+        "port_name": "/dev/ttyACM0",
+        "baud": 115200,
+        "response_timeout_s": 30
+    },
+    "uart_package": {
+        "preamble": "",
+        "size_field_length": 2
+    }
+}
