@@ -11,7 +11,7 @@ prost = "*"
 ipc = { path = "../../ipc" }
 client = { path = "../../client" }
 uart_sized_package_reader_writer = { path = "../../ipcs/uart_sized_package_reader_writer" }
-movement_data = { path = "../../data/movement_data" }
+thermo_data = { path = "../../data/thermo_data" }
 
 [dev-dependencies]
 mockall = "*"

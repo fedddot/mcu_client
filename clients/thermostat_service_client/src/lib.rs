@@ -1,10 +1,15 @@
 use ipc::{IpcReader, IpcWriter};
 
 pub use client::ServiceClient;
-pub use movement_data::{MovementApiRequest, MovementApiResponse};
+pub use thermo_data::{
+    ThermostatApiRequest,
+    ThermostatApiResponse,
+    RequestType,
+    StatusCode,
+};
 
-pub type RequestSerializer = dyn DataTransformer<MovementApiRequest, Vec<u8>, String>;
-pub type ResponseParser = dyn DataTransformer<Vec<u8>, MovementApiResponse, String>;
+pub type RequestSerializer = dyn DataTransformer<ThermostatApiRequest, Vec<u8>, String>;
+pub type ResponseParser = dyn DataTransformer<Vec<u8>, ThermostatApiResponse, String>;
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
@@ -34,8 +39,8 @@ impl MovementServiceClient {
     }
 }
 
-impl ServiceClient<MovementApiRequest, MovementApiResponse, String> for MovementServiceClient {
-    fn run_request(&mut self, request: &MovementApiRequest) -> Result<MovementApiResponse, String> {
+impl ServiceClient<MovementApiRequest, ThermostatApiResponse, String> for MovementServiceClient {
+    fn run_request(&mut self, request: &MovementApiRequest) -> Result<ThermostatApiResponse, String> {
         let serial_request = self.request_serializer.transform(request)?;
         self.raw_data_writer.write_data(&serial_request)?;
         let serial_response = self.raw_data_reader.read_data()?;
