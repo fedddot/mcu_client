@@ -9,7 +9,7 @@ pub struct ThermostatApiRequest {
 pub enum RequestType {
     Start,
     Stop,
-    SetTemperature,
+    GetTemperature,
 }
 
 #[derive(Clone, Debug)]
