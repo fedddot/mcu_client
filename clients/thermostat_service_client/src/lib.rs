@@ -13,17 +13,16 @@ pub type ResponseParser = dyn DataTransformer<Vec<u8>, ThermostatApiResponse, St
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
-pub use json_transformers::{JsonRequestSerializer, JsonResponseParser};
 pub use proto_transformers::{ProtoRequestSerializer, ProtoResponseParser};
 
-pub struct MovementServiceClient {
+pub struct ThermostatServiceClient {
     raw_data_reader:        Box<RawDataReader>,
     raw_data_writer:        Box<RawDataWriter>,
     request_serializer:     Box<RequestSerializer>,
     response_parser:        Box<ResponseParser>,
 }
 
-impl MovementServiceClient {
+impl ThermostatServiceClient {
     pub fn new(
         raw_data_reader:        Box<RawDataReader>,
         raw_data_writer:        Box<RawDataWriter>,
@@ -39,8 +38,8 @@ impl MovementServiceClient {
     }
 }
 
-impl ServiceClient<MovementApiRequest, ThermostatApiResponse, String> for MovementServiceClient {
-    fn run_request(&mut self, request: &MovementApiRequest) -> Result<ThermostatApiResponse, String> {
+impl ServiceClient<ThermostatApiRequest, ThermostatApiResponse, String> for ThermostatServiceClient {
+    fn run_request(&mut self, request: &ThermostatApiRequest) -> Result<ThermostatApiResponse, String> {
         let serial_request = self.request_serializer.transform(request)?;
         self.raw_data_writer.write_data(&serial_request)?;
         let serial_response = self.raw_data_reader.read_data()?;
@@ -53,7 +52,6 @@ pub trait DataTransformer<Input, Output, Error> {
     fn transform(&self, input: &Input) -> Result<Output, Error>;
 }
 
-mod json_transformers;
 mod proto_transformers;
 
 #[cfg(test)]
@@ -72,7 +70,7 @@ mod test {
         let test_raw_data_writer = MockIpcWriter::default();
 
         // THEN
-        let _ = MovementServiceClient::new(
+        let _ = ThermostatServiceClient::new(
             Box::new(test_raw_data_reader),
             Box::new(test_raw_data_writer),
             Box::new(JsonRequestSerializer),
@@ -83,10 +81,10 @@ mod test {
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_config_req = MovementApiRequest::Config {
+        let test_config_req = ThermostatApiRequest::Config {
             axes_configs: HashMap::new(),
         };
-        let test_linear_mvmnt_req = MovementApiRequest::LinearMovement {
+        let test_linear_mvmnt_req = ThermostatApiRequest::LinearThermostat {
             destination: Vector::new(1.0, 2.0, 3.0),
             speed: 4.0,
         };
@@ -108,7 +106,7 @@ mod test {
                 Ok(())
             });
         // WHEN
-        let mut client = MovementServiceClient::new(
+        let mut client = ThermostatServiceClient::new(
             Box::new(test_raw_data_reader),
             Box::new(test_raw_data_writer),
             Box::new(JsonRequestSerializer),
