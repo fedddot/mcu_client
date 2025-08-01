@@ -56,12 +56,11 @@ mod proto_transformers;
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use crate::proto_transformers::pb;
 
     use super::*;
     use mockall::mock;
-    use serde_json::json;
-    use movement_data::Vector;
+    use prost::Message;
 
     #[test]
     fn client_new_sanity() {
@@ -73,29 +72,29 @@ mod test {
         let _ = ThermostatServiceClient::new(
             Box::new(test_raw_data_reader),
             Box::new(test_raw_data_writer),
-            Box::new(JsonRequestSerializer),
-            Box::new(JsonResponseParser),
+            Box::new(ProtoRequestSerializer),
+            Box::new(ProtoResponseParser),
         );
     }
 
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_config_req = ThermostatApiRequest::Config {
-            axes_configs: HashMap::new(),
-        };
-        let test_linear_mvmnt_req = ThermostatApiRequest::LinearThermostat {
-            destination: Vector::new(1.0, 2.0, 3.0),
-            speed: 4.0,
+        let test_get_req = ThermostatApiRequest {
+            request_type: RequestType::GetTemperature,
+            set_temperature: None,
+            time_resolution_ms: None,
         };
         let mut test_raw_data_reader = MockIpcReader::default();
         test_raw_data_reader
             .expect_read_data()
             .returning(move || {
-                let json_response = json!({
-                    "result": "SUCCESS",
-                });
-                let serial_response = serde_json::to_vec(&json_response).unwrap();
+                let pb_response = pb::ThermostatApiResponse {
+                    status: pb::StatusCode::Success as i32,
+                    message: "Temperature retrieved successfully".into(),
+                    current_temperature: 22.5,
+                };
+                let serial_response = pb_response.encode_to_vec();
                 Ok(serial_response)
             });
         let mut test_raw_data_writer = MockIpcWriter::default();
@@ -109,15 +108,12 @@ mod test {
         let mut client = ThermostatServiceClient::new(
             Box::new(test_raw_data_reader),
             Box::new(test_raw_data_writer),
-            Box::new(JsonRequestSerializer),
-            Box::new(JsonResponseParser),
+            Box::new(ProtoRequestSerializer),
+            Box::new(ProtoResponseParser),
         );
 
         // THEN
-        let response = client.run_request(&test_linear_mvmnt_req);
-        assert!(response.is_ok());
-
-        let response = client.run_request(&test_config_req);
+        let response = client.run_request(&test_get_req);
         assert!(response.is_ok());
     }
 

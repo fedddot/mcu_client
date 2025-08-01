@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use thermo_data::{
     ThermostatApiRequest,
     ThermostatApiResponse,
@@ -56,7 +54,7 @@ impl DataTransformer<Vec<u8>, ThermostatApiResponse, String> for ProtoResponsePa
     }
 }
 
-mod pb {
+pub(crate) mod pb {
     tonic::include_proto!("service_api");
 }
 
@@ -75,6 +73,6 @@ mod tests {
 
         // THEN
         let serialized = serialize_thermostat_request(&test_request);
-        println!("Serialized request: {:?}", serialized);
+        println!("Serialized request: {serialized:?}");
     }
 }
