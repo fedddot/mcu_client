@@ -8,7 +8,7 @@
             "program": "${workspaceFolder}/target/debug/thermostat_app",
             "args": [
                 "--config", "${workspaceFolder}/thermostat_app/resources/config.json",
-                "${workspaceFolder}/thermostat_app/resources/test.gcode"
+                "--request", "${workspaceFolder}/thermostat_app/resources/request.json"
             ],
             "cwd": "${workspaceFolder}",
             "sourceLanguages": ["rust"]

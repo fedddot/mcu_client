@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use thermo_data::{RequestType, ThermostatApiRequest};
+use thermo_data::ThermostatApiRequest;
 use thermostat_service_client::{ProtoRequestSerializer, ProtoResponseParser, ServiceClient, ThermostatServiceClient};
 use uart_port::UartPort;
 use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartSizedPackageReader, UartSizedPackageWriter};
@@ -17,10 +17,11 @@ fn main() {
             .help("Path to the config JSON file")
             .required(true)
         )
-        .arg(Arg::new("gcode_file")
-            .help("Path to the G-code file to process")
+        .arg(Arg::new("request_file_path")
+            .short('r')
+            .long("request")
+            .help("Path to the JSON request file to process")
             .required(true)
-            .index(1),
         )
         .get_matches();
 
@@ -32,7 +33,8 @@ fn main() {
             eprintln!("an error occured on reading config at {config_path}: {err}");
             std::process::exit(-1);
         });
-
+    
+    let request_file_path = matches.get_one::<String>("request_file_path").expect("required argument");
     let uart_port = UartPort::new(
         &config.uart_port.port_name,
         config.uart_port.baud,
@@ -57,13 +59,18 @@ fn main() {
         Box::new(ProtoRequestSerializer),
         Box::new(ProtoResponseParser),
     );
-    
-    let test_request = ThermostatApiRequest {
-        request_type: RequestType::GetTemperature,
-        set_temperature: None,
-        time_resolution_ms: None,
-    };
-    let response = thermostat_service_client.run_request(&test_request)
+    let request_json = std::fs::read_to_string(request_file_path)
+        .unwrap_or_else(|err| {
+            eprintln!("an error occured on reading request file at {request_file_path}: {err}");
+            std::process::exit(-1);
+        });
+    let request: ThermostatApiRequest = serde_json::from_str(&request_json)
+        .unwrap_or_else(|err| {
+            eprintln!("an error occured on deserializing request: {err}");
+            std::process::exit(-1);
+        });
+    println!("Request: {request:?}");
+    let response = thermostat_service_client.run_request(&request)
         .unwrap_or_else(|err| {
             eprintln!("an error occured on running request: {err}");
             std::process::exit(-1);
