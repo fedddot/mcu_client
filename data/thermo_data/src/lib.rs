@@ -26,3 +26,20 @@ pub enum StatusCode {
     Success,
     Failure,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_serialize_request() {
+        let request = ThermostatApiRequest {
+            request_type: RequestType::Start,
+            set_temperature: Some(22.5),
+            time_resolution_ms: Some(1000),
+        };
+        let serialized = serde_json::to_string(&request).unwrap();
+        println!("Serialized Request: {serialized}");
+    }
+}
