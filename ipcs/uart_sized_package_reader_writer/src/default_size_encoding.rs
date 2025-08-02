@@ -46,10 +46,10 @@ impl SizeDecoder for DefaultSizeDecoder {
         }
         const BITS_IN_BYTE: usize = 8;
         let mut decoded_size: usize = 0;
-        for &byte in raw_data.iter().rev() {
+        raw_data.iter().rev().for_each(|byte| {
             decoded_size <<= BITS_IN_BYTE;
-            decoded_size |= byte as usize;
-        }
+            decoded_size |= *byte as usize;
+        });
         Ok(decoded_size)
     }
 }
