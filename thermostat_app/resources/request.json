@@ -1,5 +1,5 @@
 {
     "request_type": "Start",
-    "set_temperature": 22.5,
+    "set_temperature": 45,
     "time_resolution_ms": 1000
 }
