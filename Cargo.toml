@@ -12,5 +12,6 @@ members = [
     "gcode_processor",
     "gcode_processor_app",
     "clients/thermostat_service_client",
+    "clients/stepper_service_client",
     "thermostat_app",
 ]
