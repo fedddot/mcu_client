@@ -106,6 +106,7 @@ mod test {
 
         // THEN
         let response = client.run_request(&test_enable_req);
+        println!("Response: {:?}", response);
         assert!(response.is_ok());
     }
 
