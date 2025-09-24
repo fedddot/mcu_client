@@ -75,22 +75,3 @@ impl DataTransformer<Vec<u8>, StepperApiResponse, String> for ProtoResponseParse
 pub(crate) mod pb {
     tonic::include_proto!("stepper_service");
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sanity() {
-        // GIVEN
-        let test_request = StepperApiRequest {
-            request_type: RequestType::Start,
-            set_temperature: Some(22.5),
-            time_resolution_ms: Some(1000),
-        };
-
-        // THEN
-        let serialized = serialize_stepper_request(&test_request);
-        println!("Serialized request: {serialized:?}");
-    }
-}

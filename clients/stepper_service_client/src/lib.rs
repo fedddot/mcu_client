@@ -56,11 +56,10 @@ mod proto_transformers;
 
 #[cfg(test)]
 mod test {
-    use crate::proto_transformers::pb;
-
+    use std::time::Duration;
     use super::*;
     use mockall::mock;
-    use prost::Message;
+    use uart_sized_package_reader_writer::{DefaultSizeDecoder, DefaultSizeEncoder, UartPort, UartSizedPackageReader, UartSizedPackageWriter};
 
     #[test]
     fn client_new_sanity() {
@@ -80,30 +79,23 @@ mod test {
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_get_req = StepperApiRequest {
-            request_type: RequestType::GetTemperature,
-            set_temperature: None,
-            time_resolution_ms: None,
+        let test_enable_req = StepperApiRequest { 
+            request_type: RequestType::Enable,
+            direction: None,
+            step_duration_us: None,
         };
-        let mut test_raw_data_reader = MockIpcReader::default();
-        test_raw_data_reader
-            .expect_read_data()
-            .returning(move || {
-                let pb_response = pb::StepperApiResponse {
-                    status: pb::StatusCode::Success as i32,
-                    message: "Temperature retrieved successfully".into(),
-                    current_temperature: 22.5,
-                };
-                let serial_response = pb_response.encode_to_vec();
-                Ok(serial_response)
-            });
-        let mut test_raw_data_writer = MockIpcWriter::default();
-        test_raw_data_writer
-            .expect_write_data()
-            .returning(|data| {         
-                println!("Writing data: {:?}", std::str::from_utf8(data).unwrap());
-                Ok(())
-            });
+        let uart_port = UartPort::new("/dev/ttyACM0", 115200, Duration::from_secs(5)).unwrap();
+        let preamble = "ESF_MSG_START".as_bytes().to_vec();
+        let test_raw_data_reader = UartSizedPackageReader::new(
+            &uart_port,
+            &preamble,
+            Box::new(DefaultSizeDecoder::new(2)),
+        );
+        let test_raw_data_writer = UartSizedPackageWriter::new(
+            &uart_port,
+            &preamble,
+            Box::new(DefaultSizeEncoder::new(2)),
+        );
         // WHEN
         let mut client = StepperServiceClient::new(
             Box::new(test_raw_data_reader),
@@ -113,7 +105,7 @@ mod test {
         );
 
         // THEN
-        let response = client.run_request(&test_get_req);
+        let response = client.run_request(&test_enable_req);
         assert!(response.is_ok());
     }
 

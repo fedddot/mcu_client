@@ -10,10 +10,10 @@ prost = "*"
 
 ipc = { path = "../../ipc" }
 client = { path = "../../client" }
-uart_sized_package_reader_writer = { path = "../../ipcs/uart_sized_package_reader_writer" }
 stepper_data = { path = "../../data/stepper_data" }
 
 [dev-dependencies]
+uart_sized_package_reader_writer = { path = "../../ipcs/uart_sized_package_reader_writer" }
 mockall = "*"
 
 [build-dependencies]
