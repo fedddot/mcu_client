@@ -1,28 +1,28 @@
 use ipc::{IpcReader, IpcWriter};
 
 pub use client::ServiceClient;
-pub use thermo_data::{
-    ThermostatApiRequest,
-    ThermostatApiResponse,
+pub use stepper_data::{
+    StepperApiRequest,
+    StepperApiResponse,
     RequestType,
-    StatusCode,
+    ResultCode,
 };
 
-pub type RequestSerializer = dyn DataTransformer<ThermostatApiRequest, Vec<u8>, String>;
-pub type ResponseParser = dyn DataTransformer<Vec<u8>, ThermostatApiResponse, String>;
+pub type RequestSerializer = dyn DataTransformer<StepperApiRequest, Vec<u8>, String>;
+pub type ResponseParser = dyn DataTransformer<Vec<u8>, StepperApiResponse, String>;
 pub type RawDataReader = dyn IpcReader<Vec<u8>, String>;
 pub type RawDataWriter = dyn IpcWriter<Vec<u8>, String>;
 
 pub use proto_transformers::{ProtoRequestSerializer, ProtoResponseParser};
 
-pub struct ThermostatServiceClient {
+pub struct StepperServiceClient {
     raw_data_reader:        Box<RawDataReader>,
     raw_data_writer:        Box<RawDataWriter>,
     request_serializer:     Box<RequestSerializer>,
     response_parser:        Box<ResponseParser>,
 }
 
-impl ThermostatServiceClient {
+impl StepperServiceClient {
     pub fn new(
         raw_data_reader:        Box<RawDataReader>,
         raw_data_writer:        Box<RawDataWriter>,
@@ -38,8 +38,8 @@ impl ThermostatServiceClient {
     }
 }
 
-impl ServiceClient<ThermostatApiRequest, ThermostatApiResponse, String> for ThermostatServiceClient {
-    fn run_request(&mut self, request: &ThermostatApiRequest) -> Result<ThermostatApiResponse, String> {
+impl ServiceClient<StepperApiRequest, StepperApiResponse, String> for StepperServiceClient {
+    fn run_request(&mut self, request: &StepperApiRequest) -> Result<StepperApiResponse, String> {
         let serial_request = self.request_serializer.transform(request)?;
         self.raw_data_writer.write_data(&serial_request)?;
         let serial_response = self.raw_data_reader.read_data()?;
@@ -69,7 +69,7 @@ mod test {
         let test_raw_data_writer = MockIpcWriter::default();
 
         // THEN
-        let _ = ThermostatServiceClient::new(
+        let _ = StepperServiceClient::new(
             Box::new(test_raw_data_reader),
             Box::new(test_raw_data_writer),
             Box::new(ProtoRequestSerializer),
@@ -80,7 +80,7 @@ mod test {
     #[test]
     fn client_run_request_sanity() {
         // GIVEN
-        let test_get_req = ThermostatApiRequest {
+        let test_get_req = StepperApiRequest {
             request_type: RequestType::GetTemperature,
             set_temperature: None,
             time_resolution_ms: None,
@@ -89,7 +89,7 @@ mod test {
         test_raw_data_reader
             .expect_read_data()
             .returning(move || {
-                let pb_response = pb::ThermostatApiResponse {
+                let pb_response = pb::StepperApiResponse {
                     status: pb::StatusCode::Success as i32,
                     message: "Temperature retrieved successfully".into(),
                     current_temperature: 22.5,
@@ -105,7 +105,7 @@ mod test {
                 Ok(())
             });
         // WHEN
-        let mut client = ThermostatServiceClient::new(
+        let mut client = StepperServiceClient::new(
             Box::new(test_raw_data_reader),
             Box::new(test_raw_data_writer),
             Box::new(ProtoRequestSerializer),
