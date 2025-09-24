@@ -47,9 +47,9 @@ mod tests {
     #[test]
     fn test_serialize_request() {
         let request = StepperApiRequest {
-            request_type: RequestType::Start,
-            set_temperature: Some(22.5),
-            time_resolution_ms: Some(1000),
+            request_type: RequestType::Steps,
+            direction: Some(Direction::Clockwise),
+            step_duration_us: Some(1000),
         };
         let serialized = serde_json::to_string(&request).unwrap();
         println!("Serialized Request: {serialized}");
